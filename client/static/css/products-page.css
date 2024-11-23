@@ -1,0 +1,22 @@
+.background {
+  width: 100%;
+  min-height: 100vh;
+  padding-top: 5rem;
+}
+
+.product-card {
+  margin-bottom: 2rem;
+}
+
+.filter-form {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  column-gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.filter-categories {
+  width: 20rem;
+  max-height: 7.5rem;
+}

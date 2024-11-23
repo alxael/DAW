@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Online store</title>
+    {% load static %} {% load tags %}
+    <script
+      type="application/javascript"
+      src="{% static 'js/jquery.js' %}"
+    ></script>
+    {% load bootstrap5 %} {% bootstrap_css %} {% bootstrap_javascript %}
+    <script>
+      const csrfToken = "{{ csrf_token }}";
+      const productsListUrl = "{% url 'products-list' %}";
+    </script>
+    <link rel="stylesheet" href="{% static 'css/global.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/products-page.css' %}" />
+    <script src="{% static 'js/global.js' %}"></script>
+    <script src="{% static 'js/products-page.js' %}"></script>
+  </head>
+  <body>
+    <div class="container background">
+      <h1>Products</h1>
+      <form
+        class="filter-form"
+        id="filterForm"
+        name="filterForm"
+        onsubmit="event.preventDefault(); filter();"
+      >
+        <div>
+          <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+          {% if form.name.errors %}
+            {{ form.name|add_class:"form-control is-invalid" }}
+            <div class="invalid-feedback">{{ form.name.errors }}</div>
+          {% else %}
+            {{ form.name|add_class:"form-control" }}
+          {% endif %}
+        </div>
+        <div class="filter-categories">
+          <label for="{{ form.categories.id_for_label }}" class="form-label">{{ form.categories.label }}</label>
+          {% if form.categories.errors %}
+            {{ form.categories|add_class:"is-invalid" }}
+            <div class="invalid-feedback">{{ form.name.errors }}</div>
+          {% else %}
+            {{ form.categories|add_class:"form-select" }}
+          {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary">Filter</button>
+      </form>
+      <div id="products-list"></div>
+    </div>
+  </body>
+</html>

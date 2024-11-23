@@ -1,1 +1,7 @@
 __init__.py
+__pycache__
+node_modules
+.angular
+.vscode
+staticfiles
+messages

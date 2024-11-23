@@ -35,6 +35,11 @@ class ProductAdmin(admin.ModelAdmin):
 
 admin.site.register(ProductModel, ProductAdmin)
 
-admin.site.register(StockModel)
+class StockAdmin(admin.ModelAdmin):
+    list_display = ['productUuid', 'supplierUuid', 'quantity', 'unitUuid', 'receptionDate', 'expirationDate']
+    list_filter = ['productUuid', 'supplierUuid', 'receptionDate', 'expirationDate']
+    search_fields = ['productUuid', 'supplierUuid', 'receptionDate', 'expirationDate']
+
+admin.site.register(StockModel, StockAdmin)
 
 admin.site.register(OfferModel)
