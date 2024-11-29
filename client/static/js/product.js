@@ -168,8 +168,8 @@ async function filterProducts() {
 }
 
 const clearFilters = () => {
-    clearForm("filter-form");
-}
+  clearForm("filter-form");
+};
 
 $(document).ready(function () {
   if (window.location.pathname === productListUrl) {

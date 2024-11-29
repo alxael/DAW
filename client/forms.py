@@ -24,23 +24,28 @@ CONTACT_MESSAGE_TYPE_CHOICES = [
 
 # Custom fields
 
+
 class CategoryChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj: CategoryModel) -> str:
         return obj.name
-    
+
+
 class UnitChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj: UnitModel) -> str:
         return obj.name
-    
+
 # Custom widgets
+
+
 class CategoryMultipleChoiceWidget(select2.ModelSelect2MultipleWidget):
     queryset = CategoryModel.objects.all()
     search_fields = [
         "name__icontains"
     ]
+
     def label_from_instance(self, obj):
         return obj.name
-    
+
 
 # Custom validators
 
@@ -50,45 +55,59 @@ def starts_with_capital_letter(value):
     else:
         raise forms.ValidationError("Field should start with a capital letter")
 
+
 def letters_and_spaces(value):
     if re.match(r'^[a-zA-Z ]*$', value):
         return True
     else:
-        raise forms.ValidationError("Field should only contain letters and spaces!")
-    
+        raise forms.ValidationError(
+            "Field should only contain letters and spaces!")
+
+
 def unit_string(value):
     if re.match(r'^\d+(.\d+)?\ +[a-zA-Z]+$', value):
         return True
     else:
-        raise forms.ValidationError("Unit should be of format \"Number UnitShortName\"!")
-    
+        raise forms.ValidationError(
+            "Unit should be of format \"Number UnitShortName\"!")
+
 # Forms
-    
+
+
 class FilterProductsForm(forms.Form):
     name = forms.CharField(max_length=100, label="Name", required=False)
-    categories = CategoryChoiceField(queryset=CategoryModel.objects.all(), required=False, empty_label="None")
+    categories = CategoryChoiceField(
+        queryset=CategoryModel.objects.all(), required=False, empty_label="None")
+
 
 class ContactForm(forms.Form):
-    first_name = forms.CharField(required=True, max_length=10, label="First name", validators=[starts_with_capital_letter, letters_and_spaces])
-    last_name = forms.CharField(required=True, max_length=10, label="Last name", validators=[starts_with_capital_letter, letters_and_spaces])
-    birth_date = forms.DateField(required=False, label="Birth date", widget=DatePickerInput())
+    first_name = forms.CharField(required=True, max_length=10, label="First name", validators=[
+                                 starts_with_capital_letter, letters_and_spaces])
+    last_name = forms.CharField(required=True, max_length=10, label="Last name", validators=[
+                                starts_with_capital_letter, letters_and_spaces])
+    birth_date = forms.DateField(
+        required=False, label="Birth date", widget=DatePickerInput())
     email = forms.EmailField(required=True, label="Email")
     confirm_email = forms.EmailField(required=True, label="Confirm email")
-    message_type = forms.ChoiceField(required=True, choices=CONTACT_MESSAGE_TYPE_CHOICES, label="Contact reason")
-    subject = forms.CharField(required=True, max_length=100, label="Subject", validators=[starts_with_capital_letter, letters_and_spaces])
-    minimum_wait_time = forms.IntegerField(required=True, min_value=1, label="Urgency (in days)")
-    message = forms.CharField(required=True, max_length=10000, label="Message", widget=forms.Textarea())
-    
+    message_type = forms.ChoiceField(
+        required=True, choices=CONTACT_MESSAGE_TYPE_CHOICES, label="Contact reason")
+    subject = forms.CharField(required=True, max_length=100, label="Subject", validators=[
+                              starts_with_capital_letter, letters_and_spaces])
+    minimum_wait_time = forms.IntegerField(
+        required=True, min_value=1, label="Urgency (in days)")
+    message = forms.CharField(
+        required=True, max_length=10000, label="Message", widget=forms.Textarea())
+
     def clean(self):
         cleaned_data = super().clean()
         errors = []
-        
+
         message_type_name = ''
         for message_type in CONTACT_MESSAGE_TYPE_CHOICES:
             if message_type[0] == cleaned_data.get("message_type"):
                 message_type_name = message_type[1]
                 break
-        
+
         data_to_save = {
             'Name': f"{cleaned_data.get('first_name')} {cleaned_data.get('last_name')}",
             'Email': cleaned_data.get("email"),
@@ -96,19 +115,21 @@ class ContactForm(forms.Form):
             'Urgency': str(cleaned_data.get("minimum_wait_time")) + " days",
             'Subject': cleaned_data.get("subject"),
         }
-        
+
         email = cleaned_data.get("email")
         confirm_email = cleaned_data.get("confirm_email")
         if email and confirm_email and email != confirm_email:
             errors.append("Email addresses are not the same!")
-        
+
         birth_date = cleaned_data.get("birth_date")
         if birth_date:
             relative_date = relativedelta(datetime.now(), birth_date)
             if (relative_date.years) < 18:
-                errors.append("You must be over 18 years of age to submit a contact request!")
-            data_to_save['Age'] = f"{relative_date.years} years, {relative_date.months} months"
-            
+                errors.append(
+                    "You must be over 18 years of age to submit a contact request!")
+            data_to_save['Age'] = f"{relative_date.years} years, {
+                relative_date.months} months"
+
         message = cleaned_data.get("message")
         last_name = cleaned_data.get("last_name")
         message_split = re.findall(r'\w+', message)
@@ -118,25 +139,29 @@ class ContactForm(forms.Form):
             errors.append("Message should not contain any links!")
         if message_split[-1] != last_name:
             errors.append("Message should contain your signature at the end!")
-            
+
         if not errors:
             raise forms.ValidationError(' '.join(errors))
-        
+
         message.replace("\n", " ")
         message.replace("\r", " ")
         cleaned_message = re.sub(r" {2,}", ' ', message)
         data_to_save['Message'] = cleaned_message
-        
+
         timestamp = int(time.time())
         current_dir = os.path.dirname(__file__)
         messages_dir = os.path.join(current_dir, '../messages')
         with open(f"{messages_dir}/message_{timestamp}.json", "w+") as file:
             json.dump(data_to_save, file)
-        
+
+
 class ProductAddEditForm(forms.ModelForm):
-    unit = forms.CharField(required=True, label="Unit", help_text="Unit should be of format \"Number UnitShortName\". Example: 25 kg.")
-    description = forms.CharField(required=True, max_length=100, label="Description", widget=forms.Textarea())
+    unit = forms.CharField(required=True, label="Unit",
+                           help_text="Unit should be of format \"Number UnitShortName\". Example: 25 kg.")
+    description = forms.CharField(
+        required=True, max_length=100, label="Description", widget=forms.Textarea())
     details = ProseEditorFormField(required=True)
+
     class Meta:
         model = ProductModel
         fields = ['name', 'unit', 'description', 'details', 'categories']
