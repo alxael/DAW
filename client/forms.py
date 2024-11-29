@@ -7,8 +7,12 @@ from dateutil.relativedelta import relativedelta
 from django import forms
 from django.core import validators
 from django.db.models.base import Model
-from .models import CategoryModel
+from .models import CategoryModel, UnitModel, ProductModel
 from bootstrap_datepicker_plus.widgets import DatePickerInput
+from django_select2 import forms as select2
+from django_prose_editor.fields import ProseEditorFormField
+
+# Custom select options
 
 CONTACT_MESSAGE_TYPE_CHOICES = [
     (1, "Complaint"),
@@ -18,33 +22,66 @@ CONTACT_MESSAGE_TYPE_CHOICES = [
     (5, "Appointment")
 ]
 
+# Custom fields
+
 class CategoryChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj: CategoryModel) -> str:
         return obj.name
+    
+class UnitChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj: UnitModel) -> str:
+        return obj.name
+    
+# Custom widgets
+class CategoryMultipleChoiceWidget(select2.ModelSelect2MultipleWidget):
+    queryset = CategoryModel.objects.all()
+    search_fields = [
+        "name__icontains"
+    ]
+    def label_from_instance(self, obj):
+        return obj.name
+    
 
+# Custom validators
+
+def starts_with_capital_letter(value):
+    if re.match(r'^[A-Z]', value):
+        return True
+    else:
+        raise forms.ValidationError("Field should start with a capital letter")
+
+def letters_and_spaces(value):
+    if re.match(r'^[a-zA-Z ]*$', value):
+        return True
+    else:
+        raise forms.ValidationError("Field should only contain letters and spaces!")
+    
+def unit_string(value):
+    if re.match(r'^\d+(.\d+)?\ +[a-zA-Z]+$', value):
+        return True
+    else:
+        raise forms.ValidationError("Unit should be of format \"Number UnitShortName\"!")
+    
+# Forms
+    
 class FilterProductsForm(forms.Form):
     name = forms.CharField(max_length=100, label="Name", required=False)
     categories = CategoryChoiceField(queryset=CategoryModel.objects.all(), required=False, empty_label="None")
 
-def letters_and_spaces(value):
-    if re.match(r'^[A-Z]+[a-zA-Z ]*$', value):
-        return True
-    else:
-        raise forms.ValidationError("Field should start with a capital letter and only contain letters and spaces!")
-
 class ContactForm(forms.Form):
-    first_name = forms.CharField(required=True, max_length=10, label="First name", validators=[letters_and_spaces])
-    last_name = forms.CharField(required=True, max_length=10, label="Last name", validators=[letters_and_spaces])
+    first_name = forms.CharField(required=True, max_length=10, label="First name", validators=[starts_with_capital_letter, letters_and_spaces])
+    last_name = forms.CharField(required=True, max_length=10, label="Last name", validators=[starts_with_capital_letter, letters_and_spaces])
     birth_date = forms.DateField(required=False, label="Birth date", widget=DatePickerInput())
     email = forms.EmailField(required=True, label="Email")
     confirm_email = forms.EmailField(required=True, label="Confirm email")
     message_type = forms.ChoiceField(required=True, choices=CONTACT_MESSAGE_TYPE_CHOICES, label="Contact reason")
-    subject = forms.CharField(required=True, max_length=100, label="Subject", validators=[letters_and_spaces])
+    subject = forms.CharField(required=True, max_length=100, label="Subject", validators=[starts_with_capital_letter, letters_and_spaces])
     minimum_wait_time = forms.IntegerField(required=True, min_value=1, label="Urgency (in days)")
     message = forms.CharField(required=True, max_length=10000, label="Message", widget=forms.Textarea())
     
     def clean(self):
         cleaned_data = super().clean()
+        errors = []
         
         message_type_name = ''
         for message_type in CONTACT_MESSAGE_TYPE_CHOICES:
@@ -63,24 +100,27 @@ class ContactForm(forms.Form):
         email = cleaned_data.get("email")
         confirm_email = cleaned_data.get("confirm_email")
         if email and confirm_email and email != confirm_email:
-            raise forms.ValidationError("Email addresses are not the same!")
+            errors.append("Email addresses are not the same!")
         
         birth_date = cleaned_data.get("birth_date")
         if birth_date:
             relative_date = relativedelta(datetime.now(), birth_date)
             if (relative_date.years) < 18:
-                raise forms.ValidationError("You must be over 18 years of age to submit a contact request!")
+                errors.append("You must be over 18 years of age to submit a contact request!")
             data_to_save['Age'] = f"{relative_date.years} years, {relative_date.months} months"
             
         message = cleaned_data.get("message")
         last_name = cleaned_data.get("last_name")
         message_split = re.findall(r'\w+', message)
         if not (5 <= len(message_split) <= 100):
-            raise forms.ValidationError("Message should contain between 5 and 100 words!")
+            errors.append("Message should contain between 5 and 100 words!")
         if message.find("http://") != -1 or message.find("https://") != -1:
-            raise forms.ValidationError("Message should not contain any links!")
+            errors.append("Message should not contain any links!")
         if message_split[-1] != last_name:
-            raise forms.ValidationError("Message should contain your signature at the end!")
+            errors.append("Message should contain your signature at the end!")
+            
+        if not errors:
+            raise forms.ValidationError(' '.join(errors))
         
         message.replace("\n", " ")
         message.replace("\r", " ")
@@ -93,3 +133,17 @@ class ContactForm(forms.Form):
         with open(f"{messages_dir}/message_{timestamp}.json", "w+") as file:
             json.dump(data_to_save, file)
         
+class ProductAddEditForm(forms.ModelForm):
+    unit = forms.CharField(required=True, label="Unit", help_text="Unit should be of format \"Number UnitShortName\". Example: 25 kg.")
+    description = forms.CharField(required=True, max_length=100, label="Description", widget=forms.Textarea())
+    details = ProseEditorFormField(required=True)
+    class Meta:
+        model = ProductModel
+        fields = ['name', 'unit', 'description', 'details', 'categories']
+        widgets = {
+            "categories": CategoryMultipleChoiceWidget
+        }
+        validators = {
+            'name': [starts_with_capital_letter],
+            'unit': [unit_string],
+        }

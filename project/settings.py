@@ -42,7 +42,9 @@ INSTALLED_APPS = [
     'jquery',
     'bootstrap5',
     'django_bootstrap_icons',
-    "bootstrap_datepicker_plus"
+    'django_select2',
+    'django_prose_editor',
+    'bootstrap_datepicker_plus'
 ]
 
 MIDDLEWARE = [
