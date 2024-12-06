@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import UnitModel, CurrencyModel, SupplierModel, CategoryModel, ProductModel, StockModel, OfferModel
+from django.contrib.auth.admin import UserAdmin
+from .forms import SignupForm, ProfileChangeForm
+from .models import UnitModel, CurrencyModel, SupplierModel, CategoryModel, ProductModel, StockModel, OfferModel, ProfileModel, OrderModel, OrderOfferModel
 
 # Register your models here.
 
@@ -58,3 +60,17 @@ class StockAdmin(admin.ModelAdmin):
 admin.site.register(StockModel, StockAdmin)
 
 admin.site.register(OfferModel)
+
+
+class ProfileAdmin(UserAdmin):
+    add_form = SignupForm
+    form = ProfileChangeForm
+    model = ProfileModel
+    list_display = ["email", "username"]
+
+
+admin.site.register(ProfileModel, ProfileAdmin)
+
+admin.site.register(OrderModel)
+
+admin.site.register(OrderOfferModel)

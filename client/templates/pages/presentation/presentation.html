@@ -1,0 +1,103 @@
+{% extends 'pages/base.html' %}
+{% load tags %}
+{% load static %}
+
+{% block scripts %}
+  <script>
+    const csrfToken = '{{ csrf_token }}'
+    const indexUrl = "{% url 'presentation' %}"
+  </script>
+  <link rel="stylesheet" href="{% static 'css/presentation.css' %}" />
+  <script src="{% static 'js/presentation.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="container background">
+    <div class="hero border-bottom mb-5">
+      <h1 class="display-1">Online store</h1>
+    </div>
+    <div class="about-u border-bottom mb-5">
+      <div class="row align-items-center mb-5">
+        <div class="col-8">
+          <div class="card">
+            <div class="card-body">
+              <h3 class="card-title">Unbeatable Prices, Powered by Data</h3>
+              <p class="card-text">A great shopping experience goes beyond just great prices - it’s about getting your order quickly and in perfect condition. That’s why we’ve invested heavily in building strong, efficient supply chains that ensure fast, reliable delivery every time. From sourcing products to managing inventory, we’ve developed partnerships with top suppliers and logistics providers around the world. We continuously optimize our processes to reduce delays, improve efficiency, and keep costs down-ensuring that your order arrives on time, every time. Our real-time tracking system keeps you informed from the moment you place an order until it reaches your doorstep, so you can shop with confidence. Whether you're in a rush or planning ahead, we’re here to make sure your experience is as seamless as possible.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-4">
+          <img src="https://placehold.jp/300x300.png" class="img-fluid rounded mx-auto d-block" alt="placeholder" />
+        </div>
+      </div>
+      <div class="row align-items-center mb-5">
+        <div class="col-4">
+          <img src="https://placehold.jp/300x300.png" class="img-fluid rounded mx-auto d-block" alt="placeholder" />
+        </div>
+        <div class="col-8">
+          <div class="card">
+            <div class="card-body">
+              <h3 class="card-title">Streamlined Supply Chains and Fast, Reliable Delivery</h3>
+              <p class="card-text">A great shopping experience goes beyond just great prices—it’s about getting your order quickly and in perfect condition. That’s why we’ve invested heavily in building strong, efficient supply chains that ensure fast, reliable delivery every time. From sourcing products to managing inventory, we’ve developed partnerships with top suppliers and logistics providers around the world. We continuously optimize our processes to reduce delays, improve efficiency, and keep costs down—ensuring that your order arrives on time, every time. Our real-time tracking system keeps you informed from the moment you place an order until it reaches your doorstep, so you can shop with confidence. Whether you're in a rush or planning ahead, we’re here to make sure your experience is as seamless as possible.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div id="contact-section">
+        <h3>It all starts with a conversation</h3>
+        <form class="card p-3" id="contactForm" onsubmit="event.preventDefault(); contact();">
+          {% csrf_token %} {{ form.media }}
+          <div class="row align-items-start mb-3">
+            <div class="col">
+              <label for="{{ form.first_name.id_for_label }}" class="form-label">{{ form.first_name.label }}</label>
+              {{ form.first_name|add_class:'form-control' }}
+            </div>
+            <div class="col">
+              <label for="{{ form.last_name.id_for_label }}" class="form-label">{{ form.last_name.label }}</label>
+              {{ form.last_name|add_class:'form-control' }}
+            </div>
+            <div class="col">
+              <label for="{{ form.birth_date.id_for_label }}" class="form-label">{{ form.birth_date.label }}</label>
+              {{ form.birth_date|add_class:'form-control' }}
+            </div>
+          </div>
+          <div class="row align-items-start mb-3">
+            <div class="col">
+              <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+              {{ form.email|add_class:'form-control' }}
+            </div>
+            <div class="col">
+              <label for="{{ form.confirm_email.id_for_label }}" class="form-label">{{ form.confirm_email.label }}</label>
+              {{ form.confirm_email|add_class:'form-control' }}
+            </div>
+          </div>
+          <div class="row align-items-start mb-3">
+            <div class="col">
+              <label for="{{ form.message_type.id_for_label }}" class="form-label">{{ form.message_type.label }}</label>
+              {{ form.message_type|add_class:'form-control' }}
+            </div>
+            <div class="col">
+              <label for="{{ form.minimum_wait_time.id_for_label }}" class="form-label">{{ form.minimum_wait_time.label }}</label>
+              {{ form.minimum_wait_time|add_class:'form-control' }}
+            </div>
+          </div>
+          <div class="row align-items-start mb-3">
+            <div class="col">
+              <label for="{{ form.subject.id_for_label }}" class="form-label">{{ form.subject.label }}</label>
+              {{ form.subject|add_class:'form-control' }}
+            </div>
+          </div>
+          <div class="row align-items-start mb-3">
+            <div class="col">
+              <label for="{{ form.message.id_for_label }}" class="form-label">{{ form.message.label }}</label>
+              {{ form.message|add_class:'form-control' }}
+            </div>
+          </div>
+          <button id="submit-button" class="btn btn-primary">Submit</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}

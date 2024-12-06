@@ -34,17 +34,13 @@ const showFormErrors = (errors, responsePromptParent) => {
   }
 };
 
-const clearForm = (formId, multiselectFields, hasProseEditor) => {
+const clearForm = (formId, selectFields, hasProseEditor) => {
   $(`#${formId}`).trigger("reset");
-  if (multiselectFields) {
-    for (const multiselectField of multiselectFields)
-      $(`#id_${multiselectField}`).val(null).trigger("change");
+  if (selectFields) {
+    for (const selectField of selectFields)
+      $(`#id_${selectField}`).val(null).trigger("change");
   }
   if (hasProseEditor) $(".ProseMirror").empty();
-};
-
-const redirectToUrl = (url) => {
-  window.location.replace(url);
 };
 
 const createConfirmDeleteModal = (id, title, text) => {

@@ -1,61 +1,54 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Online store</title>
-    {% load static %} {% load tags %}
-    <script type="application/javascript" src="{% static 'js/jquery.js' %}"></script>
-    {% load bootstrap5 %} {% bootstrap_css %} {% bootstrap_javascript %}
-    <script>
-      const csrfToken = '{{ csrf_token }}'
-      const productListUrl = "{% url 'product-list' %}"
-      const productEditUrl = "{% url 'product-edit' 'uuid' %}"
-    </script>
-    <link rel="stylesheet" href="{% static 'css/global.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/product.css' %}" />
-    <script src="{% static 'js/global.js' %}"></script>
-    <script src="{% static 'js/product.js' %}"></script>
-  </head>
-  <body>
-    <div class="container background">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Edit product</h1>
-        <a class="btn btn-outline-primary" href="{% url 'product-list' %}">Back to list</a>
-      </div>
-      <form class="card p-3" id="edit-product-form" name="edit-product-form" onsubmit="event.preventDefault(); editProduct();">
-        {% csrf_token %} {{ form.media }}
-        <div class="row align-items-start mb-3">
-          <div class="col">
-            <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
-            {{ form.name|add_class:'form-control' }}
-          </div>
-          <div class="col">
-            <label for="{{ form.unit.id_for_label }}" class="form-label">{{ form.unit.label }}</label>
-            <div data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{ form.unit.help_text }}">{{ form.unit|add_class:'form-control' }}</div>
-          </div>
-        </div>
-        <div class="row align-items-start mb-5">
-          <div class="col">
-            <label for="{{ form.categories.id_for_label }}" class="form-label">{{ form.categories.label }}</label>
-            <div class="multiselect">{{ form.categories|add_class:'form-control' }}</div>
-          </div>
-        </div>
-        <div class="row align-items-start mb-3">
-          <div class="col">
-            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
-            <div class="textarea">{{ form.description|add_class:'form-control' }}</div>
-          </div>
-        </div>
-        <div class="row align-items-start mb-3">
-          <div class="col">
-            <label for="{{ form.details.id_for_label }}" class="form-label">{{ form.details.label }}</label>
-            <div class="textarea prose-editor">{{ form.details|add_class:'text-area' }}</div>
-          </div>
-        </div>
-        <button id="submit-button" class="btn btn-primary">Edit</button>
-      </form>
+{% extends 'pages/base.html' %}
+{% load tags %}
+{% load static %}
+
+{% block scripts %}
+  <script>
+    const csrfToken = '{{ csrf_token }}'
+    const productListUrl = "{% url 'product-list' %}"
+    const productEditUrl = "{% url 'product-edit' 'uuid' %}"
+  </script>
+  <link rel="stylesheet" href="{% static 'css/product.css' %}" />
+  <script src="{% static 'js/product.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="container background">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1>Edit product</h1>
+      <a class="btn btn-outline-primary" href="{% url 'product-list' %}">Back to list</a>
     </div>
-  </body>
-  {% show_footer %}
-</html>
+    <form class="card p-3" id="edit-product-form" name="edit-product-form" onsubmit="event.preventDefault(); editProduct();">
+      {% csrf_token %} {{ form.media }}
+      <div class="row align-items-start mb-3">
+        <div class="col">
+          <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+          {{ form.name|add_class:'form-control' }}
+        </div>
+        <div class="col">
+          <label for="{{ form.unit.id_for_label }}" class="form-label">{{ form.unit.label }}</label>
+          <div data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{ form.unit.help_text }}">{{ form.unit|add_class:'form-control' }}</div>
+        </div>
+      </div>
+      <div class="row align-items-start mb-5">
+        <div class="col">
+          <label for="{{ form.categories.id_for_label }}" class="form-label">{{ form.categories.label }}</label>
+          <div class="multiselect">{{ form.categories|add_class:'form-control' }}</div>
+        </div>
+      </div>
+      <div class="row align-items-start mb-3">
+        <div class="col">
+          <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+          <div class="textarea">{{ form.description|add_class:'form-control' }}</div>
+        </div>
+      </div>
+      <div class="row align-items-start mb-3">
+        <div class="col">
+          <label for="{{ form.details.id_for_label }}" class="form-label">{{ form.details.label }}</label>
+          <div class="textarea prose-editor">{{ form.details|add_class:'text-area' }}</div>
+        </div>
+      </div>
+      <button id="submit-button" class="btn btn-primary">Edit</button>
+    </form>
+  </div>
+{% endblock %}

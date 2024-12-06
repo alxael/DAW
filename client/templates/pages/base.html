@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Online store</title>
+    {% load static %} {% load tags %}
+    <script type="application/javascript" src="{% static 'js/jquery.js' %}"></script>
+    {% load bootstrap5 %} {% bootstrap_css %} {% bootstrap_javascript %} {% load bootstrap_icons %}
+    <link rel="stylesheet" href="{% static 'css/global.css' %}" />
+    <script src="{% static 'js/global.js' %}"></script>
+    {% block scripts %}
+
+    {% endblock %}
+  </head>
+  <body>
+    {% block content %}
+
+    {% endblock %}
+  </body>
+  {% include 'components/footer.html' %}
+</html>

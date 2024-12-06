@@ -119,7 +119,7 @@ async function filterProducts() {
 
     const cardBody = $("<div></div>").addClass("card-body");
 
-    const cardHeader = $("<div></div>").addClass("title");
+    const cardHeader = $("<div></div>").addClass("title mb-1");
     const cardTitle = $("<h4></h4>").text(product.name).addClass("card-title");
     const cardActions = $("<div></div>").addClass("actions");
 
@@ -148,14 +148,14 @@ async function filterProducts() {
 
     const cardDescription = $("<h6></h6>")
       .text(product.description)
-      .addClass("card-subtitle text-muted");
+      .addClass("card-subtitle text-muted mb-2");
     cardBody.append(cardDescription);
 
-    const categoryTagList = $("<div></div>");
+    const categoryTagList = $("<div></div>").addClass("d-flex flex-row");
     for (const category of product.categories) {
       const categoryTag = $("<span></span>")
         .text(category.name)
-        .addClass("badge bg-primary mx-1");
+        .addClass("badge bg-primary p-2 mx-1");
       categoryTagList.append(categoryTag);
     }
     cardBody.append(categoryTagList);

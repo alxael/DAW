@@ -1,0 +1,92 @@
+{% extends 'pages/base.html' %}
+{% load tags %}
+{% load static %}
+
+{% block scripts %}
+  <script>
+    const csrfToken = '{{ csrf_token }}'
+    const signInUrl = "{% url 'sign-in' %}"
+    const signUpUrl = "{% url 'sign-up' %}"
+    const signOutUrl = "{% url 'sign-out' %}"
+    const profileUrl = "{% url 'profile' %}"
+    const changePasswordUrl = "{% url 'change-password' %}"
+  </script>
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}" />
+  <script src="{% static 'js/auth.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="container background-form" id="background">
+    <h1>Sign up</h1>
+    <form class="card p-3" id="sign-up-form" name="sign-up-form" onsubmit="event.preventDefault(); signup();">
+      {% csrf_token %} {{ form.media }}
+      <div class="row align-items-start mb-3">
+        <div class="col">
+          <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label }}</label>
+          {{ form.username|add_class:'form-control' }}
+        </div>
+      </div>
+      <div class="row align-items-start mb-3">
+        <div class="col">
+          <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+          {{ form.email|add_class:'form-control' }}
+        </div>
+      </div>
+      <div class="row align-items-start mb-3">
+        <div class="col">
+          <label for="{{ form.first_name.id_for_label }}" class="form-label">{{ form.first_name.label }}</label>
+          {{ form.first_name|add_class:'form-control' }}
+        </div>
+        <div class="col">
+          <label for="{{ form.last_name.id_for_label }}" class="form-label">{{ form.last_name.label }}</label>
+          {{ form.last_name|add_class:'form-control' }}
+        </div>
+      </div>
+      <div class="row align-items-start mb-3">
+        <div class="col">
+          <label for="{{ form.dateOfBirth.id_for_label }}" class="form-label">{{ form.dateOfBirth.label }}</label>
+          {{ form.dateOfBirth|add_class:'form-control' }}
+        </div>
+      </div>
+      <div class="row align-items-start mb-3">
+        <div class="col">
+          <label for="{{ form.password1.id_for_label }}" class="form-label">{{ form.password1.label }}</label>
+          {{ form.password1|add_class:'form-control' }}
+        </div>
+        <div class="col">
+          <label for="{{ form.password2.id_for_label }}" class="form-label">{{ form.password2.label }}</label>
+          {{ form.password2|add_class:'form-control' }}
+        </div>
+      </div>
+      <div class="row align-items-start mb-4">
+        <div class="col">
+          <label for="{{ form.country.id_for_label }}" class="form-label">{{ form.country.label }}</label>
+          {{ form.country|add_class:'form-control' }}
+        </div>
+        <div class="col">
+          <label for="{{ form.city.id_for_label }}" class="form-label">{{ form.city.label }}</label>
+          {{ form.city|add_class:'form-control' }}
+        </div>
+      </div>
+      <div class="row align-items-start mb-3">
+        <div class="col">
+          <label for="{{ form.addressLineOne.id_for_label }}" class="form-label">{{ form.addressLineOne.label }}</label>
+          {{ form.addressLineOne|add_class:'form-control' }}
+        </div>
+      </div>
+      <div class="row align-items-start mb-3">
+        <div class="col">
+          <label for="{{ form.addressLineTwo.id_for_label }}" class="form-label">{{ form.addressLineTwo.label }}</label>
+          {{ form.addressLineTwo|add_class:'form-control' }}
+        </div>
+      </div>
+      <div class="row align-items-start mb-3">
+        <div class="col">
+          <label for="{{ form.phoneNumber.id_for_label }}" class="form-label">{{ form.phoneNumber.label }}</label>
+          {{ form.phoneNumber|add_class:'form-control' }}
+        </div>
+      </div>
+      <button id="submit-button" class="btn btn-primary">Sign up</button>
+    </form>
+  </div>
+{% endblock %}

@@ -5,12 +5,13 @@ import json
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from django import forms
-from django.core import validators
-from django.db.models.base import Model
-from .models import CategoryModel, UnitModel, ProductModel
+from django.core.validators import RegexValidator
+from .models import CategoryModel, UnitModel, ProductModel, ProfileModel
 from bootstrap_datepicker_plus.widgets import DatePickerInput
 from django_select2 import forms as select2
 from django_prose_editor.fields import ProseEditorFormField
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm, AuthenticationForm, PasswordChangeForm
+from cities_light.models import Country, City
 
 # Custom select options
 
@@ -47,37 +48,36 @@ class CategoryMultipleChoiceWidget(select2.ModelSelect2MultipleWidget):
         return obj.name
 
 
+class CountryChoiceWidget(select2.ModelSelect2Widget):
+    queryset = Country.objects.all()
+    empty_label = ''
+    search_fields = [
+        "name__icontains"
+    ]
+
+    def label_from_instance(self, obj):
+        return obj.name
+
+
+class CityChoiceWidget(select2.ModelSelect2Widget):
+    queryset = City.objects.all()
+    empty_label = ''
+    search_fields = [
+        "name__icontains"
+    ]
+
+    def label_from_instance(self, obj):
+        return obj.name
+
 # Custom validators
 
-def starts_with_capital_letter(value):
-    if re.match(r'^[A-Z]', value):
-        return True
-    else:
-        raise forms.ValidationError("Field should start with a capital letter")
 
-
-def letters_and_spaces(value):
-    if re.match(r'^[a-zA-Z ]*$', value):
-        return True
-    else:
-        raise forms.ValidationError(
-            "Field should only contain letters and spaces!")
-
-
-def unit_string(value):
-    if re.match(r'^\d+(.\d+)?\ +[a-zA-Z]+$', value):
-        return True
-    else:
-        raise forms.ValidationError(
-            "Unit should be of format \"Number UnitShortName\"!")
+starts_with_capital_letter = RegexValidator(r'^[A-Z]', "Field should start with a capital letter")
+letters_and_spaces = RegexValidator(r'^[a-zA-Z ]*$', "Field should only contain letters and spaces!")
+unit_string = RegexValidator(r'^\d+(.\d+)?\ +[a-zA-Z]+$', "Unit should be of format \"Number UnitShortName\"!")
+username = RegexValidator(r'^[A-Za-z][A-Za-z0-9_.]{6,30}$', "Username should have between 6 and 30 characters, and contain only lowercase and uppercase letters, numbers, dots and underscores.")
 
 # Forms
-
-
-class FilterProductsForm(forms.Form):
-    name = forms.CharField(max_length=100, label="Name", required=False)
-    categories = CategoryChoiceField(
-        queryset=CategoryModel.objects.all(), required=False, empty_label="None")
 
 
 class ContactForm(forms.Form):
@@ -127,8 +127,7 @@ class ContactForm(forms.Form):
             if (relative_date.years) < 18:
                 errors.append(
                     "You must be over 18 years of age to submit a contact request!")
-            data_to_save['Age'] = f"{relative_date.years} years, {
-                relative_date.months} months"
+            data_to_save['Age'] = f"{relative_date.years} years, {relative_date.months} months"
 
         message = cleaned_data.get("message")
         last_name = cleaned_data.get("last_name")
@@ -155,12 +154,56 @@ class ContactForm(forms.Form):
             json.dump(data_to_save, file)
 
 
+class SigninForm(AuthenticationForm):
+    stay_signed_in = forms.BooleanField(required=False, initial=False, label="Keep me signed in for a day", widget=forms.CheckboxInput)
+
+
+class SignupForm(UserCreationForm):
+
+    class Meta:
+        model = ProfileModel
+        fields = ("username", "email", "first_name", "last_name", "dateOfBirth", "password1", "password2", "country", "city", "addressLineOne", "addressLineTwo", "phoneNumber")
+        widgets = {
+            "country": CountryChoiceWidget,
+            "city": CityChoiceWidget,
+            "dateOfBirth": DatePickerInput
+        }
+        labels = {
+            "addressLineOne": "Address first line",
+            "addressLineTwo": "Address second line",
+            "dateOfBirth": "Date of birth",
+            "phoneNumber": "Phone number (with country code)"
+        }
+        validators = {
+            "username": [username],
+            "first_name": [starts_with_capital_letter, letters_and_spaces],
+            "last_name": [starts_with_capital_letter, letters_and_spaces]
+        }
+
+
+class ProfileChangeForm(UserChangeForm):
+
+    class Meta:
+        model = ProfileModel
+        fields = ("username", "email")
+
+
+class ChangePasswordForm(PasswordChangeForm):
+    pass
+
+
+class FilterProductsForm(forms.Form):
+    name = forms.CharField(max_length=100, label="Name", required=False)
+    categories = CategoryChoiceField(
+        queryset=CategoryModel.objects.all(), required=False, empty_label="None")
+
+
 class ProductAddEditForm(forms.ModelForm):
     unit = forms.CharField(required=True, label="Unit",
                            help_text="Unit should be of format \"Number UnitShortName\". Example: 25 kg.")
     description = forms.CharField(
         required=True, max_length=100, label="Description", widget=forms.Textarea())
-    details = ProseEditorFormField(required=True)
+    details = ProseEditorFormField(required=False)
 
     class Meta:
         model = ProductModel

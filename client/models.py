@@ -2,6 +2,23 @@ import uuid
 from django.db import models
 from django import forms
 from django_prose_editor.fields import ProseEditorField
+from django.contrib.auth.models import User, AbstractUser
+from phonenumber_field.modelfields import PhoneNumberField
+
+
+class ProfileModel(AbstractUser):
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    emailConfirmationUuid = models.UUIDField(null=True, blank=True)
+    isEmailConfirmed = models.BooleanField(default=False)
+    dateOfBirth = models.DateTimeField(null=True, blank=True)
+    phoneNumber = PhoneNumberField()
+    country = models.ForeignKey('cities_light.Country', on_delete=models.CASCADE, null=True, blank=True)
+    city = models.ForeignKey('cities_light.City', on_delete=models.CASCADE, null=True, blank=True)
+    addressLineOne = models.CharField(max_length=100, null=True, blank=True)
+    addressLineTwo = models.CharField(max_length=100, null=True, blank=True)
+
+    def __str__(self):
+        return self.username
 
 
 class UnitModel(models.Model):
@@ -70,11 +87,11 @@ class ProductModel(models.Model):
     def clean(self):
         errors = {}
 
-        unit = (str(int(self.quantity)) + " " +
-                self.unitUuid.shortName).lower()
-        if unit not in self.description.lower():
-            errors['__all__'] = [
-                "Unit should appear in product description at least once!"]
+        if self.quantity and self.unitUuid:
+            unit = (f"{str(int(self.quantity))} {self.unitUuid.shortName}").lower()
+            if unit not in self.description.lower():
+                errors['__all__'] = [
+                    "Unit should appear in product description at least once!"]
 
         if errors:
             raise forms.ValidationError(errors)
@@ -97,7 +114,32 @@ class StockModel(models.Model):
 class OfferModel(models.Model):
     uuid = models.UUIDField(
         primary_key=True, default=uuid.uuid4, editable=False)
-    stockUuid = models.ForeignKey(StockModel, on_delete=models.PROTECT)
+    productUuid = models.ForeignKey(ProductModel, on_delete=models.PROTECT)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     currencyUuid = models.ForeignKey(CurrencyModel, on_delete=models.PROTECT)
     expirationDate = models.DateTimeField(null=True, blank=True)
+
+
+ORDER_STATUS = [
+    (0, "New"),
+    (1, "Processing"),
+    (2, "Confirmed"),
+    (3, "Delivering"),
+    (4, "Received"),
+    (5, "Completed")
+]
+
+
+class OrderModel(models.Model):
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    userUuid = models.ForeignKey(ProfileModel, on_delete=models.PROTECT, null=True, blank=True)
+    offers = models.ManyToManyField(OfferModel, through="OrderOfferModel")
+    status = models.PositiveIntegerField(default=ORDER_STATUS[0], choices=ORDER_STATUS)
+    fullAddress = models.CharField(max_length=200, default="")
+    contact = models.CharField(max_length=200, default="")
+
+
+class OrderOfferModel(models.Model):
+    orderUuid = models.ForeignKey(OrderModel, on_delete=models.PROTECT)
+    offerUuid = models.ForeignKey(OfferModel, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField()
