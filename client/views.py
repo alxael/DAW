@@ -1,11 +1,19 @@
 import re
+import uuid
+from django import forms
+from django.urls import reverse
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.http import JsonResponse, Http404
 from django.contrib.auth.decorators import login_required
-from .models import ProductModel, UnitModel
+from django.core.mail import EmailMessage
+from django.core.paginator import Paginator
+from django.template.loader import render_to_string
+from .models import ProductModel, UnitModel, ProfileModel
 from .forms import FilterProductsForm, ProductAddEditForm, ContactForm, SigninForm, SignupForm, ChangePasswordForm
 from .dto import ProductListDto
+
+# Presentation
 
 
 def presentation(request):
@@ -21,6 +29,8 @@ def presentation(request):
     else:
         return Http404()
 
+# Authentication
+
 
 def add_data_to_session(request, user):
     request.session["username"] = user.username
@@ -31,7 +41,6 @@ def add_data_to_session(request, user):
         fullname += user.first_name + " "
     if user.last_name:
         fullname += user.last_name
-    print(fullname)
     request.session["fullname"] = fullname
 
     request.session["dateofbirth"] = user.dateOfBirth.strftime("%d/%m/%Y") if user.dateOfBirth else ""
@@ -58,8 +67,24 @@ def sign_up(request):
     if request.method == "POST":
         sign_up_form = SignupForm(request.POST)
         if sign_up_form.is_valid():
-            user = sign_up_form.save()
+            user = sign_up_form.save(commit=False)
+            user.emailConfirmationUuid = uuid.uuid4()
+
+            relative_url = reverse('email-confirmation', args=[user.emailConfirmationUuid])
+            absolute_url = request.build_absolute_uri(relative_url)
+
+            content = render_to_string("emails/email-confirmation.html", {"first_name": user.first_name, "confirmation_url": absolute_url})
+            confirmation_email = EmailMessage(
+                subject="Online Store - Account confirmation",
+                body=content,
+                to=[user.email]
+            )
+            confirmation_email.content_subtype = "html"
+            confirmation_email.send(fail_silently=False)
+
+            user.save()
             add_data_to_session(request, user)
+
             return JsonResponse({"success": True})
         else:
             return JsonResponse({"success": False, "errors": sign_up_form.errors})
@@ -77,6 +102,10 @@ def sign_in(request):
             user = sign_in_form.get_user()
             login(request, user)
 
+            if not user.isEmailConfirmed:
+                sign_in_form.add_error(None, "You have not confirmed your email! Please check your inbox and confirm your email!")
+                return JsonResponse({'success': False, 'errors': sign_in_form.errors})
+
             session_expiry_time = 0 if not sign_in_form.cleaned_data["stay_signed_in"] else 24 * 60 * 60
             request.session.set_expiry(session_expiry_time)
 
@@ -86,8 +115,26 @@ def sign_in(request):
         else:
             return JsonResponse({"success": False, "errors": sign_in_form.errors})
     elif request.method == "GET":
+        if request.user and request.user.is_authenticated:
+            return redirect("profile")
         sign_in_form = SigninForm()
         return render(request, "pages/auth/signin.html", {"form": sign_in_form})
+    else:
+        return Http404()
+
+
+def email_confirmation(request, email_confirmation_uuid):
+    if request.method == "GET":
+        try:
+            user = ProfileModel.objects.get(emailConfirmationUuid=email_confirmation_uuid)
+        except (ProfileModel.DoesNotExist, forms.ValidationError):
+            return redirect("presentation")
+        if user.isEmailConfirmed == True:
+            return redirect("presentation")
+        else:
+            user.isEmailConfirmed = True
+            user.save()
+            return render(request, "pages/auth/email-confirmation.html")
     else:
         return Http404()
 
@@ -122,6 +169,8 @@ def change_password(request):
 def profile(request):
     return render(request, "pages/auth/profile.html")
 
+# Product
+
 
 def process_product_form(product_form):
     if product_form.is_valid():
@@ -136,7 +185,7 @@ def process_product_form(product_form):
         try:
             unit_uuid = UnitModel.objects.get(shortName=unit_short_name)
         except UnitModel.DoesNotExist:
-            product_form.errors["unit"] = ["Could not find specified unit!"]
+            product_form.add_error("unit", "Could not find specified unit!")
             return JsonResponse({'success': False, 'errors': product_form.errors})
 
         product.quantity = quantity
@@ -152,19 +201,30 @@ def process_product_form(product_form):
 
 @login_required
 def product_list(request):
-    all_products = ProductModel.objects.all()
+    all_products = ProductModel.objects.all().order_by("uuid")
     if request.method == 'POST':
         filter_form = FilterProductsForm(request.POST)
         if filter_form.is_valid():
             name = filter_form.cleaned_data['name']
             if name:
-                all_products = all_products.filter(name__contains=name)
+                all_products = all_products.filter(name__icontains=name)
+
             categories = filter_form.cleaned_data['categories']
             if categories:
                 all_products = all_products.filter(
-                    categories__in=[categories.uuid])
-        products = [ProductListDto(product) for product in all_products]
-        return JsonResponse({'products': products})
+                    categories__in=[categories.uuid]).distinct()
+
+            page_number = request.GET.get("pageNumber") if request.GET.get("pageNumber") else 1
+            records_per_page = request.GET.get("recordsPerPage") if request.GET.get("recordsPerPage") else 10
+
+            paginator = Paginator(all_products, per_page=records_per_page)
+            all_products = paginator.page(page_number).object_list
+            pages = list(paginator.get_elided_page_range(page_number, on_each_side=1, on_ends=2))
+
+            products = [ProductListDto(product) for product in all_products]
+            return JsonResponse({"success": True, 'products': products, 'paginator': {'pageNumbers': pages}})
+        else:
+            return JsonResponse({"success": False, 'errors': filter_form.errors})
     elif request.method == 'GET':
         filter_form = FilterProductsForm()
         return render(request, 'pages/product/product-list.html', {'form': filter_form})

@@ -22,30 +22,22 @@
     </div>
     <form class="filter-form" id="filter-form" name="filter-form" onsubmit="event.preventDefault(); filterProducts();">
       <div class="filter-form-fields">
-        <div>
-          <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
-          {% if form.name.errors %}
-            {{ form.name|add_class:'form-control
-        is-invalid' }}
-            <div class="invalid-feedback">{{ form.name.errors }}</div>
-          {% else %}
+        <div class="filter-form-criteria">
+          <div>
+            <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
             {{ form.name|add_class:'form-control' }}
-          {% endif %}
-        </div>
-        <div class="filter-categories">
-          <label for="{{ form.categories.id_for_label }}" class="form-label">{{ form.categories.label }}</label>
-          {% if form.categories.errors %}
-            {{ form.categories|add_class:'is-invalid' }}
-            <div class="invalid-feedback">{{ form.name.errors }}</div>
-          {% else %}
+          </div>
+          <div class="filter-categories">
+            <label for="{{ form.categories.id_for_label }}" class="form-label">{{ form.categories.label }}</label>
             {{ form.categories|add_class:'form-select' }}
-          {% endif %}
+          </div>
+        </div>
+        <div class="filter-form-actions">
+          <button type="submit" class="btn btn-primary">Filter</button>
+          <button class="btn btn-outline-primary" onclick="clearFilters();">Clear</button>
         </div>
       </div>
-      <div class="filter-form-actions">
-        <button type="submit" class="btn btn-primary">Filter</button>
-        <button class="btn btn-outline-primary" onclick="clearFilters();">Clear</button>
-      </div>
+      {% include 'components/pagination.html' with object_name='Products' %}
     </form>
     <div id="products-list"></div>
   </div>

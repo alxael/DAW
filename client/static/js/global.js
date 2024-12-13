@@ -82,3 +82,42 @@ const createConfirmDeleteModal = (id, title, text) => {
 
   $("body").append(modal);
 };
+
+let pageNumber = 1;
+let recordsPerPage = 10;
+
+const setPaginationPageNumbers = (requestFunction, paginator) => {
+  const pageNumbersNav = $("<nav></nav>");
+  const pageNumbers = $("<ul></ul>").addClass("pagination");
+  for (const pageLabel of paginator.pageNumbers) {
+    const pageNumberButton = $("<li></li>").addClass("page-item");
+    const pageLink = $("<a></a>").addClass("page-link").text(pageLabel);
+
+    if (pageLabel == pageNumber) {
+      pageNumberButton.addClass("active");
+    }
+    if (pageLabel == "…") {
+      pageNumberButton.addClass("disabled");
+    } else {
+      pageLink.bind("click", function () {
+        pageNumber = parseInt($(this).text());
+        requestFunction();
+      });
+    }
+    pageNumberButton.append(pageLink);
+    pageNumbers.append(pageNumberButton);
+  }
+  pageNumbersNav.append(pageNumbers);
+
+  $("#pageNumber").empty();
+  $("#pageNumber").append(pageNumbersNav);
+};
+
+const setPaginationRecordsPerPage = (requestFunction) => {
+  $(document).ready(function () {
+    $("#recordsPerPage").on("change", function () {
+      recordsPerPage = parseInt(this.value);
+      requestFunction();
+    });
+  });
+};

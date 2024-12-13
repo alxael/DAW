@@ -1,0 +1,29 @@
+{% extends 'pages/base.html' %}
+{% load tags %}
+{% load static %}
+
+{% block scripts %}
+  <script>
+    const csrfToken = '{{ csrf_token }}'
+    const signInUrl = "{% url 'sign-in' %}"
+    const signUpUrl = "{% url 'sign-up' %}"
+    const signOutUrl = "{% url 'sign-out' %}"
+    const profileUrl = "{% url 'profile' %}"
+    const changePasswordUrl = "{% url 'change-password' %}"
+  </script>
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}" />
+  <script src="{% static 'js/auth.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="container background-info">
+    <div class="card p-3 text-white bg-success">
+      <div class="card-body">
+        <h4 class="card-title">Account confirmed!</h4>
+        <p class="card-text">
+          Thank you for confirming your email. You can now sign in to your account <a class="link-light" href="{% url 'sign-in' %}">here</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -8,11 +8,11 @@
   margin-bottom: 2rem;
 }
 
-.filter-form {
+.filter-form-fields {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .filter-categories {
@@ -20,7 +20,7 @@
   max-height: 7.5rem;
 }
 
-.filter-form-fields {
+.filter-form-criteria {
   display: flex;
   flex-direction: row;
   align-items: flex-end;

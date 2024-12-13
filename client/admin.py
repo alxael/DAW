@@ -15,8 +15,8 @@ admin.site.register(UnitModel, UnitAdmin)
 
 
 class CurrencyAdmin(admin.ModelAdmin):
-    list_display = ['name', 'code', 'countryCode']
-    search_fields = ['code', 'countryCode']
+    list_display = ['name', 'code', 'country']
+    search_fields = ['code', 'country']
 
 
 admin.site.register(CurrencyModel, CurrencyAdmin)

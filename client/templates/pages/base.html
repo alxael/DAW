@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Online store</title>
+    <title>Online Store</title>
     {% load static %} {% load tags %}
     <script type="application/javascript" src="{% static 'js/jquery.js' %}"></script>
     {% load bootstrap5 %} {% bootstrap_css %} {% bootstrap_javascript %} {% load bootstrap_icons %}
@@ -13,6 +13,7 @@
 
     {% endblock %}
   </head>
+  {% include 'components/navbar.html' %}
   <body>
     {% block content %}
 

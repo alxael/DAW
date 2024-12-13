@@ -40,7 +40,9 @@ async function signup() {
 
   if (response.success) {
     $("#background").empty();
-    const successCard = $("<div></div>").addClass("card p-3 text-bg-success");
+    const successCard = $("<div></div>").addClass(
+      "card p-3 text-white bg-success"
+    );
 
     const body = $("<div></div>").addClass("card-body");
     const title = $("<h4></h4>")
@@ -50,12 +52,12 @@ async function signup() {
     const content = $("<p></p>")
       .addClass("card-text")
       .text(
-        "You have successfully created your account! You may now sign in on the "
+        "You have successfully created your account! After you confirm your email you may sign in on the "
       );
     const signInLinkText = $("<a></a>")
       .text("sign in page.")
       .attr("href", signInUrl)
-      .addClass("link-success");
+      .addClass("link-light");
     content.append(signInLinkText);
 
     body.append(title);
@@ -86,7 +88,7 @@ async function changePassword() {
   }).then((data) => data.json());
 
   if (response.success) {
-    // show message in profile page next
+    // show message in profile page
     window.location.href = profileUrl;
   } else {
     cleanUpFormErrors();

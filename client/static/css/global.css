@@ -7,3 +7,23 @@
   justify-content: space-between;
   align-items: center;
 }
+
+.pagination {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;  
+}
+
+.records-per-page {
+  width: 15rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+}
+
+#recordsPerPage {
+  width: 5rem;
+}

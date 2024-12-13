@@ -23,6 +23,8 @@ CONTACT_MESSAGE_TYPE_CHOICES = [
     (5, "Appointment")
 ]
 
+PAGINATION_CHOICES = [(5, "5"), (10, "10"), (25, "25")]
+
 # Custom fields
 
 
@@ -195,7 +197,7 @@ class ChangePasswordForm(PasswordChangeForm):
 class FilterProductsForm(forms.Form):
     name = forms.CharField(max_length=100, label="Name", required=False)
     categories = CategoryChoiceField(
-        queryset=CategoryModel.objects.all(), required=False, empty_label="None")
+        queryset=CategoryModel.objects.all().order_by("name"), required=False, empty_label="None")
 
 
 class ProductAddEditForm(forms.ModelForm):

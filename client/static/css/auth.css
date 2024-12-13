@@ -10,7 +10,16 @@
   padding: 5rem 10% 5rem 10%;
 }
 
+.background-info {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
 .signup-success-card {
-    width: 50%;
-    max-width: 15rem;
+  width: 50%;
+  max-width: 15rem;
 }

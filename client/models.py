@@ -36,7 +36,7 @@ class CurrencyModel(models.Model):
         primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=10)
-    countryCode = models.CharField(max_length=10, blank=True)
+    country = models.ForeignKey('cities_light.Country', on_delete=models.CASCADE, null=True, blank=True)
 
     def get_uuid_display(self):
         return self.name
@@ -63,6 +63,12 @@ class CategoryModel(models.Model):
         'self', on_delete=models.CASCADE, null=True, blank=True)
 
     def get_uuid_display(self):
+        return self.name
+
+    def get_parentUuid_display(self):
+        return self.parentUuid.name
+
+    def __str__(self):
         return self.name
 
 
@@ -95,6 +101,9 @@ class ProductModel(models.Model):
 
         if errors:
             raise forms.ValidationError(errors)
+
+    def __str__(self):
+        return self.name
 
 
 class StockModel(models.Model):

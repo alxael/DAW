@@ -92,7 +92,6 @@ async function deleteProduct(uuid) {
       "X-CSRFToken": csrfToken,
     },
   }).then((data) => data.json());
-  console.log(response);
   return response.success;
 }
 
@@ -100,7 +99,11 @@ async function filterProducts() {
   const formElement = document.forms["filter-form"];
   const formData = new FormData(formElement);
 
-  const response = await fetch(productListUrl, {
+  let url = new URL(productListUrl, window.location.origin);
+  url.searchParams.set("pageNumber", pageNumber);
+  url.searchParams.set("recordsPerPage", recordsPerPage);
+
+  const response = await fetch(url.toString(), {
     method: "POST",
     credentials: "same-origin",
     headers: {
@@ -112,58 +115,71 @@ async function filterProducts() {
   }).then((data) => data.json());
 
   $("#products-list").empty();
-  for (const product of response.products) {
-    const productCard = $("<div></div>")
-      .addClass("card product-card")
-      .attr("id", product.uuid);
+  if (response.success) {
+    setPaginationPageNumbers(filterProducts, response.paginator);
 
-    const cardBody = $("<div></div>").addClass("card-body");
+    for (const product of response.products) {
+      const productCard = $("<div></div>")
+        .addClass("card product-card")
+        .attr("id", product.uuid);
 
-    const cardHeader = $("<div></div>").addClass("title mb-1");
-    const cardTitle = $("<h4></h4>").text(product.name).addClass("card-title");
-    const cardActions = $("<div></div>").addClass("actions");
+      const cardBody = $("<div></div>").addClass("card-body");
 
-    const editAction = $("<a></a>")
-      .text("Edit")
-      .addClass("btn btn-outline-primary")
-      .attr("href", productEditUrl.replace("uuid", "") + product.uuid);
-    const deleteAction = $("<button></button>")
-      .text("Delete")
-      .addClass("btn btn-outline-danger");
-    deleteAction.on("click", function () {
-      const deleteProductModal = new bootstrap.Modal(
-        document.getElementById("delete-product-modal"),
-        {}
+      const cardHeader = $("<div></div>").addClass(
+        "title align-items-center mb-3"
       );
-      $("#delete-product-modal-button").data("uuid", product.uuid);
-      deleteProductModal.show();
-    });
+      const cardTitle = $("<h3></h3>")
+        .text(product.name)
+        .addClass("card-title");
+      const cardActions = $("<div></div>").addClass("actions");
 
-    cardActions.append(editAction);
-    cardActions.append(deleteAction);
+      const editAction = $("<a></a>")
+        .text("Edit")
+        .addClass("btn btn-outline-primary")
+        .attr("href", productEditUrl.replace("uuid", "") + product.uuid);
+      const deleteAction = $("<button></button>")
+        .text("Delete")
+        .addClass("btn btn-outline-danger");
+      deleteAction.on("click", function () {
+        const deleteProductModal = new bootstrap.Modal(
+          document.getElementById("delete-product-modal"),
+          {}
+        );
+        $("#delete-product-modal-button").data("uuid", product.uuid);
+        deleteProductModal.show();
+      });
 
-    cardHeader.append(cardTitle);
-    cardHeader.append(cardActions);
-    cardBody.append(cardHeader);
+      cardActions.append(editAction);
+      cardActions.append(deleteAction);
 
-    const cardDescription = $("<h6></h6>")
-      .text(product.description)
-      .addClass("card-subtitle text-muted mb-2");
-    cardBody.append(cardDescription);
+      cardHeader.append(cardTitle);
+      cardHeader.append(cardActions);
+      cardBody.append(cardHeader);
 
-    const categoryTagList = $("<div></div>").addClass("d-flex flex-row");
-    for (const category of product.categories) {
-      const categoryTag = $("<span></span>")
-        .text(category.name)
-        .addClass("badge bg-primary p-2 mx-1");
-      categoryTagList.append(categoryTag);
+      const cardDescription = $("<h6></h6>")
+        .text(product.description)
+        .addClass("card-subtitle text-muted mb-2");
+      cardBody.append(cardDescription);
+
+      const categoryTagList = $("<div></div>").addClass(
+        "d-flex flex-row flex-wrap"
+      );
+      for (const category of product.categories) {
+        const categoryTag = $("<span></span>")
+          .text(category.name)
+          .addClass("badge bg-primary p-2 m-1");
+        categoryTagList.append(categoryTag);
+      }
+      cardBody.append(categoryTagList);
+
+      productCard.append(cardBody);
+
+      $("#products-list").append(productCard);
     }
-    cardBody.append(categoryTagList);
-
-    productCard.append(cardBody);
-
-    $("#products-list").append(productCard);
+  } else {
+    console.log("Failed!");
   }
+
   return true;
 }
 
@@ -187,4 +203,5 @@ $(document).ready(function () {
       }
     });
   }
+  setPaginationRecordsPerPage(filterProducts);
 });
