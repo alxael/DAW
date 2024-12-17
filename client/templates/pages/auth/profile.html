@@ -33,8 +33,8 @@
           {% endif %}
         </li>
         <li class="list-group-item">
-          Date of birth:{% if request.session.dateofbirth %}
-            {{ request.session.dateofbirth }}
+          Date of birth:{% if request.session.date_of_birth %}
+            {{ request.session.date_of_birth }}
           {% else %}
             {{ '-' }}
           {% endif %}
@@ -54,8 +54,8 @@
           {% endif %}
         </li>
         <li class="list-group-item">
-          Phone number:{% if request.session.phonenumber %}
-            {{ request.session.phonenumber }}
+          Phone number:{% if request.session.phone_number %}
+            {{ request.session.phone_number }}
           {% else %}
             {{ '-' }}
           {% endif %}

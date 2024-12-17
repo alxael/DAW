@@ -83,7 +83,7 @@ async function editProduct() {
 }
 
 async function deleteProduct(uuid) {
-  const response = await fetch(productDeleteUrl.replace("uuid", "") + uuid, {
+  const response = await fetch(productDeleteUrl.replace("uuid", uuid), {
     method: "DELETE",
     credentials: "same-origin",
     headers: {
@@ -100,8 +100,8 @@ async function filterProducts() {
   const formData = new FormData(formElement);
 
   let url = new URL(productListUrl, window.location.origin);
-  url.searchParams.set("pageNumber", pageNumber);
-  url.searchParams.set("recordsPerPage", recordsPerPage);
+  url.searchParams.set("page_number", pageNumber);
+  url.searchParams.set("records_per_page", recordsPerPage);
 
   const response = await fetch(url.toString(), {
     method: "POST",
@@ -116,7 +116,7 @@ async function filterProducts() {
 
   $("#products-list").empty();
   if (response.success) {
-    setPaginationPageNumbers(filterProducts, response.paginator);
+    setPaginationPageNumbers(filterProducts, response.pages);
 
     for (const product of response.products) {
       const productCard = $("<div></div>")
@@ -185,6 +185,8 @@ async function filterProducts() {
 
 const clearFilters = () => {
   clearForm("filter-form");
+  resetPagination();
+  filterProducts();
 };
 
 $(document).ready(function () {
@@ -200,6 +202,7 @@ $(document).ready(function () {
       const response = await deleteProduct(uuid);
       if (response) {
         $(`#${uuid}`).remove();
+        filterProducts();
       }
     });
   }

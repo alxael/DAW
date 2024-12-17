@@ -1,13 +1,13 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .forms import SignupForm, ProfileChangeForm
-from .models import UnitModel, CurrencyModel, SupplierModel, CategoryModel, ProductModel, StockModel, OfferModel, ProfileModel, OrderModel, OrderOfferModel
+from .models import UnitModel, CurrencyModel, SupplierModel, CategoryModel, ProductModel, StockModel, OfferModel, OfferViewModel, PromotionModel, ProfileModel, OrderModel, OrderOfferModel
 
 # Register your models here.
 
 
 class UnitAdmin(admin.ModelAdmin):
-    list_display = ['name', 'shortName']
+    list_display = ['name', 'short_name']
     search_fields = ['name']
 
 
@@ -31,16 +31,16 @@ admin.site.register(SupplierModel, SupplierAdmin)
 
 
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['uuid', 'parentUuid', 'name']
-    list_filter = ['name', 'parentUuid']
-    search_fields = ['name', 'uuid', 'parentUuid']
+    list_display = ['uuid', 'parent', 'name']
+    list_filter = ['name', 'parent']
+    search_fields = ['name', 'uuid', 'parent']
 
 
 admin.site.register(CategoryModel, CategoryAdmin)
 
 
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['name', 'quantity', 'unitUuid']
+    list_display = ['name', 'quantity', 'unit']
     list_filter = ['name', 'categories']
     search_fields = ['name', 'categories']
 
@@ -49,17 +49,21 @@ admin.site.register(ProductModel, ProductAdmin)
 
 
 class StockAdmin(admin.ModelAdmin):
-    list_display = ['productUuid', 'supplierUuid', 'quantity',
-                    'unitUuid', 'receptionDate', 'expirationDate']
-    list_filter = ['productUuid', 'supplierUuid',
-                   'receptionDate', 'expirationDate']
-    search_fields = ['productUuid', 'supplierUuid',
-                     'receptionDate', 'expirationDate']
+    list_display = ['product', 'supplier', 'quantity',
+                    'unit', 'reception_date', 'expiration_date']
+    list_filter = ['product', 'supplier',
+                   'reception_date', 'expiration_date']
+    search_fields = ['product', 'supplier',
+                     'reception_date', 'expiration_date']
 
 
 admin.site.register(StockModel, StockAdmin)
 
 admin.site.register(OfferModel)
+
+admin.site.register(OfferViewModel)
+
+admin.site.register(PromotionModel)
 
 
 class ProfileAdmin(UserAdmin):

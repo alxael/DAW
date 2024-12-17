@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-7d-=+1rr(1jdx)mngv^+0(j1r%inmaq#kl@rbudy$hi_&%08-_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -44,7 +44,6 @@ INSTALLED_APPS = [
     'phonenumber_field',
     'bootstrap5',
     'bootstrap_datepicker_plus',
-    'django_bootstrap_icons',
     'django_select2',
     'django_prose_editor'
 ]
@@ -139,13 +138,64 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': 'logs/errors.log',
+            'formatter': 'simple',
+        },
+        "mail_admins": {
+            "level": "CRITICAL",
+            "class": "django.utils.log.AdminEmailHandler",
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        "django.request": {
+            "handlers": ["mail_admins"],
+            "level": "CRITICAL",
+            "propagate": False,
+        },
+    },
+}
+
 LOGIN_URL = "/signin"
 AUTH_USER_MODEL = "client.ProfileModel"
-
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587 
-EMAIL_USE_TLS = True 
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'alxael56@gmail.com'
 EMAIL_HOST_PASSWORD = 'ppnv umrv qimm ndaj'
 DEFAULT_FROM_EMAIL = 'Online Store <alxael56@gmail.com>'
+
+OFFER_VIEW_USER_HISTORY_SIZE = 10
+OFFER_VIEW_PROMOTION_MINIMUM_INTEREST = 3
+
+SIGNIN_FAILED_ATTEMPTS_COUNT_TRIGGER = 3
+
+ADMINS = [("alxael", "alex.aelenei04@gmail.com")]
+FORBIDDEN_USERNAMES = ["admin", "adm", "manager"]

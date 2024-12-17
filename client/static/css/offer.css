@@ -4,8 +4,12 @@
   padding-top: 5rem;
 }
 
-.product-card {
+.offer-card {
   margin-bottom: 2rem;
+}
+
+.price-card {
+  min-width: 20rem;
 }
 
 .filter-form-fields {

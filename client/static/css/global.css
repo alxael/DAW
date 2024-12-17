@@ -17,13 +17,12 @@
 }
 
 .records-per-page {
-  width: 15rem;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 1rem;
 }
 
-#recordsPerPage {
+.records-per-page-select {
   width: 5rem;
 }

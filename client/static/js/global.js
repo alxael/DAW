@@ -2,7 +2,7 @@ $(window).on("load", function () {
   const tooltipTriggerList = [].slice.call(
     document.querySelectorAll('[data-bs-toggle="tooltip"]')
   );
-  const tooltipList = tooltipTriggerList.map(function (tooltipTriggerElement) {
+  tooltipTriggerList.map(function (tooltipTriggerElement) {
     return new bootstrap.Tooltip(tooltipTriggerElement);
   });
 });
@@ -83,13 +83,16 @@ const createConfirmDeleteModal = (id, title, text) => {
   $("body").append(modal);
 };
 
-let pageNumber = 1;
-let recordsPerPage = 10;
+const pageNumberDefault = 1;
+let pageNumber = pageNumberDefault;
 
-const setPaginationPageNumbers = (requestFunction, paginator) => {
+const recordsPerPageDefault = 10;
+let recordsPerPage = recordsPerPageDefault;
+
+const setPaginationPageNumbers = (requestFunction, pages) => {
   const pageNumbersNav = $("<nav></nav>");
   const pageNumbers = $("<ul></ul>").addClass("pagination");
-  for (const pageLabel of paginator.pageNumbers) {
+  for (const pageLabel of pages) {
     const pageNumberButton = $("<li></li>").addClass("page-item");
     const pageLink = $("<a></a>").addClass("page-link").text(pageLabel);
 
@@ -109,15 +112,21 @@ const setPaginationPageNumbers = (requestFunction, paginator) => {
   }
   pageNumbersNav.append(pageNumbers);
 
-  $("#pageNumber").empty();
-  $("#pageNumber").append(pageNumbersNav);
+  $("#page_number").empty();
+  $("#page_number").append(pageNumbersNav);
 };
 
 const setPaginationRecordsPerPage = (requestFunction) => {
   $(document).ready(function () {
-    $("#recordsPerPage").on("change", function () {
+    $("#records_per_page").on("change", function () {
       recordsPerPage = parseInt(this.value);
+      pageNumber = pageNumberDefault;
       requestFunction();
     });
   });
+};
+
+const resetPagination = () => {
+  pageNumber = pageNumberDefault;
+  recordsPerPage = recordsPerPageDefault;
 };

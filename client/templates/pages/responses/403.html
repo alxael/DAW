@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Online Store</title>
+    {% load bootstrap5 %} {% bootstrap_css %} {% bootstrap_javascript %} {% load tags %}
+  </head>
+  <body>
+    <div class="container d-flex flex-column justify-content-center align-items-center vh-100">
+      <h1 class="mb-5">
+        {% if title %}
+          {{ title }}
+        {% else %}
+          Error 403
+        {% endif %}
+      </h1>
+      <h3>
+        Hello{% if username %}
+          {{ username }}
+        {% else %}
+          dear anonymous user
+        {% endif %}
+      </h3>
+      <p class="w-50 text-center mb-3">{{ custom_message }}</p>
+      <p class="w-50 text-center">
+        {% if username %}
+          You may view your account information in the <a href="{% url 'profile' %}">profile page</a>.
+        {% else %}
+          You may access your account in the <a href="{% url 'sign-in' %}">sign in page</a> or create a new account in the <a href="{% url 'sign-up' %}">sign up page</a>.
+        {% endif %}
+      </p>
+    </div>
+  </body>
+</html>

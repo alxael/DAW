@@ -5,29 +5,26 @@
 {% block scripts %}
   <script>
     const csrfToken = '{{ csrf_token }}'
-    const productListUrl = "{% url 'product-list' %}"
-    const productAddUrl = "{% url 'product-add' %}"
-    const productEditUrl = "{% url 'product-edit' 'uuid' %}"
-    const productDeleteUrl = "{% url 'product-delete' 'uuid' %}"
+    const offerListUrl = "{% url 'offer-list' %}"
+    const offerViewUrl = "{% url 'offer-view' 'uuid' %}"
   </script>
-  <link rel="stylesheet" href="{% static 'css/product.css' %}" />
-  <script src="{% static 'js/product.js' %}"></script>
+  <link rel="stylesheet" href="{% static 'css/offer.css' %}" />
+  <script src="{% static 'js/offer.js' %}"></script>
 {% endblock %}
 
 {% block content %}
   <div class="container background">
     <div class="title mb-3">
-      <h1>Products</h1>
-      <a class="btn btn-primary" href="{% url 'product-add' %}">Add</a>
+      <h1>Offers</h1>
     </div>
-    <form class="filter-form" id="filter-form" name="filter-form" onsubmit="event.preventDefault(); filterProducts();">
+    <form class="filter-form" id="filter-form" name="filter-form" onsubmit="event.preventDefault(); filterOffers();">
       <div class="filter-form-fields">
         <div class="filter-form-criteria">
           <div>
             <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
             {{ form.name|add_class:'form-control' }}
           </div>
-          <div class="filter-category">
+          <div class="filter-category mr-auto">
             <label for="{{ form.category.id_for_label }}" class="form-label">{{ form.category.label }}</label>
             {{ form.category|add_class:'form-select' }}
           </div>
@@ -37,8 +34,8 @@
           <button class="btn btn-outline-primary" onclick="event.preventDefault(); clearFilters();">Clear</button>
         </div>
       </div>
-      {% include 'components/pagination.html' with object_name='Products' %}
+      {% include 'components/pagination.html' with object_name='Offers' %}
     </form>
-    <div id="products-list"></div>
+    <div id="offers-list" class="container"></div>
   </div>
 {% endblock %}

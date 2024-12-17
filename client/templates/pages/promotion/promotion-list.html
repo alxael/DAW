@@ -5,22 +5,21 @@
 {% block scripts %}
   <script>
     const csrfToken = '{{ csrf_token }}'
-    const productListUrl = "{% url 'product-list' %}"
-    const productAddUrl = "{% url 'product-add' %}"
-    const productEditUrl = "{% url 'product-edit' 'uuid' %}"
-    const productDeleteUrl = "{% url 'product-delete' 'uuid' %}"
+    const promotionListUrl = "{% url 'promotion-list' %}"
+    const promotionAddUrl = "{% url 'promotion-add' %}"
+    const promotionDeleteUrl = "{% url 'promotion-delete' 'uuid' %}"
   </script>
-  <link rel="stylesheet" href="{% static 'css/product.css' %}" />
-  <script src="{% static 'js/product.js' %}"></script>
+  <link rel="stylesheet" href="{% static 'css/promotion.css' %}" />
+  <script src="{% static 'js/promotion.js' %}"></script>
 {% endblock %}
 
 {% block content %}
   <div class="container background">
     <div class="title mb-3">
-      <h1>Products</h1>
-      <a class="btn btn-primary" href="{% url 'product-add' %}">Add</a>
+      <h1>Promotions</h1>
+      <a class="btn btn-primary" href="{% url 'promotion-add' %}">Add</a>
     </div>
-    <form class="filter-form" id="filter-form" name="filter-form" onsubmit="event.preventDefault(); filterProducts();">
+    <form class="filter-form" id="filter-form" name="filter-form" onsubmit="event.preventDefault(); filterPromotions();">
       <div class="filter-form-fields">
         <div class="filter-form-criteria">
           <div>
@@ -37,8 +36,8 @@
           <button class="btn btn-outline-primary" onclick="event.preventDefault(); clearFilters();">Clear</button>
         </div>
       </div>
-      {% include 'components/pagination.html' with object_name='Products' %}
+      {% include 'components/pagination.html' with object_name='Promotions' %}
     </form>
-    <div id="products-list"></div>
+    <div id="promotions-list"></div>
   </div>
 {% endblock %}
