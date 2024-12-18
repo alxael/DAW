@@ -42,46 +42,46 @@ async function addPromotion() {
   return true;
 }
 
-// async function editPromotion() {
-//   const formElement = document.forms["edit-promotion-form"];
-//   const formData = new FormData(formElement);
+async function editPromotion() {
+  const formElement = document.forms["edit-promotion-form"];
+  const formData = new FormData(formElement);
 
-//   const response = await fetch(window.location.href, {
-//     method: "POST",
-//     credentials: "same-origin",
-//     headers: {
-//       Accept: "application/json",
-//       "X-Requested-With": "XMLHttpRequest",
-//       "X-CSRFToken": csrfToken,
-//     },
-//     body: formData,
-//   }).then((data) => data.json());
+  const response = await fetch(window.location.href, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+      "X-CSRFToken": csrfToken,
+    },
+    body: formData,
+  }).then((data) => data.json());
 
-//   cleanUpFormErrors();
-//   $("#response-success").remove();
+  cleanUpFormErrors();
+  $("#response-success").remove();
 
-//   if (response.success) {
-//     const responseSuccessAlert = $("<div></div>")
-//       .text(
-//         "You have successfully edited the promotion. You may now return to the "
-//       )
-//       .attr("id", "response-success")
-//       .addClass("alert alert-success mt-3");
-//     const pageListLinkText = $("<a></a>")
-//       .text("promotion list page")
-//       .attr("href", promotionListUrl)
-//       .addClass("link-success");
-//     responseSuccessAlert.append(pageListLinkText);
-//     $("#edit-promotion-form").parent().append(responseSuccessAlert);
+  if (response.success) {
+    const responseSuccessAlert = $("<div></div>")
+      .text(
+        "You have successfully edited the promotion. You may now return to the "
+      )
+      .attr("id", "response-success")
+      .addClass("alert alert-success mt-3");
+    const pageListLinkText = $("<a></a>")
+      .text("promotion list page")
+      .attr("href", promotionListUrl)
+      .addClass("link-success");
+    responseSuccessAlert.append(pageListLinkText);
+    $("#edit-promotion-form").parent().append(responseSuccessAlert);
 
-//     setTimeout(() => {
-//       $("#response-success").remove();
-//     }, 10000);
-//   } else {
-//     showFormErrors(response.errors, $("#edit-promotion-form").parent());
-//   }
-//   return true;
-// }
+    setTimeout(() => {
+      $("#response-success").remove();
+    }, 10000);
+  } else {
+    showFormErrors(response.errors, $("#edit-promotion-form").parent());
+  }
+  return true;
+}
 
 async function deletePromotion(uuid) {
   const response = await fetch(promotionDeleteUrl.replace("uuid", uuid), {
@@ -145,8 +145,8 @@ async function filterPromotions() {
 
       const editAction = $("<a></a>")
         .text("Edit")
-        .addClass("btn btn-outline-primary");
-      // .attr("href", promotionEditUrl.replace("uuid", "") + promotion.uuid);
+        .addClass("btn btn-outline-primary")
+        .attr("href", promotionEditUrl.replace("uuid", "") + promotion.uuid);
       const deleteAction = $("<button></button>")
         .text("Delete")
         .addClass("btn btn-outline-danger");

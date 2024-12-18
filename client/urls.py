@@ -1,5 +1,12 @@
 from django.urls import path, include
+from django.contrib.sitemaps.views import sitemap
+from .sitemaps import StaticViewsSitemap, OfferSitemap
 from . import views
+
+sitemaps = {
+    'offer': OfferSitemap,
+    'static': StaticViewsSitemap
+}
 
 auth_urlpatterns = [
     path("signin", views.sign_in, name="sign-in"),
@@ -25,10 +32,12 @@ offer_urlpatterns = [
 promotion_urlpatterns = [
     path("list", views.promotion_list, name="promotion-list"),
     path("add", views.promotion_add, name="promotion-add"),
+    path("edit/<promotion_uuid>", views.promotion_edit, name="promotion-edit"),
     path("delete/<promotion_uuid>", views.promotion_delete, name="promotion-delete")
 ]
 
 urlpatterns = [
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path("", views.presentation, name="presentation"),
     path("", include(auth_urlpatterns)),
     path("product/", include(product_urlpatterns)),

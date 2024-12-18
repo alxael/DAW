@@ -67,10 +67,86 @@ admin.site.register(PromotionModel)
 
 
 class ProfileAdmin(UserAdmin):
-    add_form = SignupForm
-    form = ProfileChangeForm
-    model = ProfileModel
-    list_display = ["email", "username"]
+    # form = ProfileChangeForm
+    # add_form = SignupForm
+    list_display = ["email", "username", "is_email_confirmed"]
+    search_fields = ["email", "username"]
+    readonly_fields = ['email_confirmation_code']
+
+    fieldsets = [
+        ("General",
+         {
+             "fields": [
+                 "email",
+                 "username",
+                 "is_email_confirmed"
+             ]
+         }),
+        ("Personal information",
+         {
+             "fields": [
+                 "first_name",
+                 "last_name",
+                 "date_of_birth",
+                 "phone_number",
+                 "country",
+                 "city",
+                 "address_line_one",
+                 "address_line_two"
+             ]
+         }),
+        ("Permissions",
+         {
+             "fields": [
+                 "is_active",
+                 "is_staff",
+                 "is_superuser",
+                 "groups",
+                 "user_permissions",
+             ],
+         }),
+        ("Important dates",
+         {
+             "fields": [
+                 "last_login",
+                 "date_joined"
+             ],
+         })
+    ]
+
+    add_fieldsets = [
+        ("General",
+         {
+             "fields": [
+                 "email",
+                 "username",
+                 "is_email_confirmed"
+             ]
+         }),
+        ("Personal information",
+         {
+             "fields": [
+                 "first_name",
+                 "last_name",
+                 "date_of_birth",
+                 "phone_number",
+                 "country",
+                 "city",
+                 "address_line_one",
+                 "address_line_two"
+             ]
+         }),
+        ("Permissions",
+         {
+             "fields": [
+                 "is_active",
+                 "is_staff",
+                 "is_superuser",
+                 "groups",
+                 "user_permissions",
+             ],
+         }),
+    ]
 
 
 admin.site.register(ProfileModel, ProfileAdmin)

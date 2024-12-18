@@ -45,41 +45,47 @@ def mail_admins_html(template_path, template_data, subject):
     logger.info(f"Mailed admins! Subject: {subject}")
 
 
-def check_user(request, signed_in, is_staff, is_superuser):
-    username = None if not request.user else request.user.username
+def get_response_forbidden(request, template_data):
     template_path = "pages/responses/403.html"
-    if signed_in and not request.user and not request.user.is_authenticated:
-        return HttpResponseForbidden(
-            render(
-                request,
-                template_path,
-                {
-                    "username": username,
-                    "custom_message": "You do not have access to this resource."
-                }
-            ))
-    if is_staff and not request.user.is_staff and not request.user.is_superuser:
-        return HttpResponseForbidden(
-            render(
-                request,
-                template_path,
-                {
-                    "username": username,
-                    "title": "Access forbidden",
-                    "custom_message": "You do not have access to this resource."
-                }
-            ))
-    if is_superuser and not request.user.is_superuser:
-        return HttpResponseForbidden(
-            render(
-                request,
-                template_path,
-                {
-                    "username": username,
-                    "title": "Access forbidden"
-                }
-            ))
-    return True
+    template_data["username"] = None if not request.user else request.user.username
+    return HttpResponseForbidden(render(request, template_path, template_data))
+
+
+# def check_user(request, signed_in, is_staff, is_superuser):
+#     username = None if not request.user else request.user.username
+#     template_path = "pages/responses/403.html"
+#     if signed_in and not request.user and not request.user.is_authenticated:
+#         return HttpResponseForbidden(
+#             render(
+#                 request,
+#                 template_path,
+#                 {
+#                     "username": username,
+#                     "custom_message": "You do not have access to this resource."
+#                 }
+#             ))
+#     if is_staff and not request.user.is_staff and not request.user.is_superuser:
+#         return HttpResponseForbidden(
+#             render(
+#                 request,
+#                 template_path,
+#                 {
+#                     "username": username,
+#                     "title": "Access forbidden",
+#                     "custom_message": "You do not have access to this resource."
+#                 }
+#             ))
+#     if is_superuser and not request.user.is_superuser:
+#         return HttpResponseForbidden(
+#             render(
+#                 request,
+#                 template_path,
+#                 {
+#                     "username": username,
+#                     "title": "Access forbidden"
+#                 }
+#             ))
+#     return True
 
 
 # Presentation
@@ -310,9 +316,8 @@ def process_product_form(product_form):
 
 
 def product_list(request):
-    check = check_user(request, signed_in=True, is_staff=True, is_superuser=True)
-    if check != True:
-        return check
+    if not request.user or not request.user.has_perm("view_productmodel"):
+        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to view the products list!"})
 
     all_products = ProductModel.objects.all().order_by("uuid")
     if request.method == 'POST':
@@ -344,9 +349,8 @@ def product_list(request):
 
 
 def product_add(request):
-    check = check_user(request, signed_in=True, is_staff=True, is_superuser=True)
-    if check != True:
-        return check
+    if not request.user or not request.user.has_perm("add_productmodel"):
+        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to add a product!"})
 
     if request.method == 'POST':
         add_form = ProductAddEditForm(request.POST)
@@ -359,9 +363,8 @@ def product_add(request):
 
 
 def product_edit(request, product_uuid):
-    check = check_user(request, signed_in=True, is_staff=True, is_superuser=True)
-    if not check:
-        return check
+    if not request.user or not request.user.has_perm("edit_productmodel"):
+        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to edit a product!"})
 
     if request.method == 'POST':
         existing_product = ProductModel.objects.get(uuid=product_uuid)
@@ -377,9 +380,8 @@ def product_edit(request, product_uuid):
 
 
 def product_delete(request, product_uuid):
-    check = check_user(request, signed_in=True, is_staff=True, is_superuser=True)
-    if check != True:
-        return check
+    if not request.user or not request.user.has_perm("delete_productmodel"):
+        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to delete a product!"})
 
     if request.method == 'DELETE':
         try:
@@ -502,9 +504,8 @@ def process_promotion_form(promotion_form):
 
 
 def promotion_list(request):
-    check = check_user(request, signed_in=True, is_staff=True, is_superuser=True)
-    if check != True:
-        return check
+    if not request.user or not request.user.has_perm("view_promotionmodel"):
+        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to view the promotions list!"})
 
     all_promotions = PromotionModel.objects.all().order_by("uuid")
     if request.method == 'POST':
@@ -535,9 +536,8 @@ def promotion_list(request):
 
 
 def promotion_add(request):
-    check = check_user(request, signed_in=True, is_staff=True, is_superuser=True)
-    if check != True:
-        return check
+    if not request.user or not request.user.has_perm("add_promotionmodel"):
+        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to add a promotion!"})
 
     if request.method == 'POST':
         add_form = PromotionAddEditForm(request.POST)
@@ -549,10 +549,25 @@ def promotion_add(request):
         return HttpResponseNotFound()
 
 
+def promotion_edit(request, promotion_uuid):
+    if not request.user or not request.user.has_perm("edit_promotionmodel"):
+        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to edit a promotion!"})
+
+    if request.method == 'POST':
+        existing_promotion = PromotionModel.objects.get(uuid=promotion_uuid)
+        edit_form = PromotionAddEditForm(request.POST, instance=existing_promotion)
+        return process_promotion_form(edit_form)
+    elif request.method == 'GET':
+        promotion = PromotionModel.objects.get(uuid=promotion_uuid)
+        edit_form = PromotionAddEditForm(instance=promotion, initial={"discount_percentage": promotion.discount * 100})
+        return render(request, 'pages/promotion/promotion-edit.html', {'form': edit_form})
+    else:
+        return HttpResponseNotFound()
+
+
 def promotion_delete(request, promotion_uuid):
-    check = check_user(request, signed_in=True, is_staff=True, is_superuser=True)
-    if check != True:
-        return check
+    if not request.user or not request.user.has_perm("delete_promotionmodel"):
+        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to delete a promotion!"})
 
     if request.method == 'DELETE':
         try:

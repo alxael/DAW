@@ -2,6 +2,7 @@ import uuid
 from django.db import models
 from django import forms
 from django.utils import timezone
+from django.urls import reverse
 from django_prose_editor.fields import ProseEditorField
 from django.contrib.auth.models import AbstractUser
 from phonenumber_field.modelfields import PhoneNumberField
@@ -141,12 +142,16 @@ class OfferModel(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=3, default=0)
     currency = models.ForeignKey(CurrencyModel, on_delete=models.PROTECT)
+    last_changed = models.DateTimeField(auto_now=True)
 
     def get_price_display(self):
         return f"{self.price:.2f} {self.currency.code}"
 
     def get_price_discounted_display(self):
         return f"{(self.price * (1 - self.discount)):.2f} {self.currency.code}"
+
+    def get_absolute_url(self):
+        return reverse("offer-view", kwargs={"offer_uuid": self.uuid})
 
 
 class OfferViewModel(models.Model):
@@ -161,6 +166,7 @@ class PromotionModel(models.Model):
     uuid = models.UUIDField(
         primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
+    subject = models.CharField(max_length=100)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField(null=True, blank=True)
     category = models.ForeignKey(CategoryModel, on_delete=models.PROTECT)
