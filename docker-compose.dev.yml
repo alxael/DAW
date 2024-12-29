@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: ./compose/dev/Dockerfile
+    image: daw_project
+    command: /start
+    volumes:
+      - .:/app
+    ports:
+      - 8001:8000
+    env_file:
+      - ./env/.env-dev
+    depends_on:
+      - redis
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+      - ./compose/dev/database:/docker-entrypoint-initdb.d
+    ports:
+      - 5433:5432
+    environment:
+      - POSTGRES_DB=daw
+      - POSTGRES_USER=daw_user
+      - POSTGRES_PASSWORD=daw_user_password
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - 6380:6379
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: ./compose/dev/Dockerfile
+    image: daw_project
+    command: /start-celeryworker
+    volumes:
+      - .:/app
+    env_file:
+      - ./env/.env-dev
+    depends_on:
+      - redis
+      - postgres
+      - web
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: ./compose/dev/Dockerfile
+    image: daw_project
+    command: /start-celerybeat
+    volumes:
+      - .:/app
+    env_file:
+      - ./env/.env-dev
+    depends_on:
+      - redis
+      - postgres
+      - web
+
+  flower:
+    build:
+      context: .
+      dockerfile: ./compose/dev/Dockerfile
+    image: daw_project
+    command: /start-flower
+    volumes:
+      - .:/app
+    env_file:
+      - ./env/.env-dev
+    ports:
+      - 5556:5555
+    depends_on:
+      - redis
+      - postgres
+      - web
+
+volumes:
+  postgres_data:

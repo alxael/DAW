@@ -27,6 +27,7 @@ class ProfileModel(AbstractUser):
     city = models.ForeignKey('cities_light.City', on_delete=models.CASCADE, null=True, blank=True)
     address_line_one = models.CharField(max_length=100, null=True, blank=True)
     address_line_two = models.CharField(max_length=100, null=True, blank=True)
+    is_following_newsletter = models.BooleanField(default=False)
 
     def __str__(self):
         return self.username
@@ -195,3 +196,5 @@ class OrderOfferModel(models.Model):
     order = models.ForeignKey(OrderModel, on_delete=models.PROTECT)
     offer = models.ForeignKey(OfferModel, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    discount = models.DecimalField(max_digits=10, decimal_places=3, default=0)

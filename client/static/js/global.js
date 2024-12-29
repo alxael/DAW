@@ -130,3 +130,7 @@ const resetPagination = () => {
   pageNumber = pageNumberDefault;
   recordsPerPage = recordsPerPageDefault;
 };
+
+const addToCart = () => {
+  console.log("Added to cart!");
+};

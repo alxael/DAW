@@ -67,8 +67,6 @@ admin.site.register(PromotionModel)
 
 
 class ProfileAdmin(UserAdmin):
-    # form = ProfileChangeForm
-    # add_form = SignupForm
     list_display = ["email", "username", "is_email_confirmed"]
     search_fields = ["email", "username"]
     readonly_fields = ['email_confirmation_code']
@@ -146,6 +144,13 @@ class ProfileAdmin(UserAdmin):
                  "user_permissions",
              ],
          }),
+        ("Important dates",
+         {
+             "fields": [
+                 "last_login",
+                 "date_joined"
+             ],
+         })
     ]
 
 

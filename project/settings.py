@@ -10,7 +10,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
+from dotenv import load_dotenv
 from pathlib import Path
+from celery.schedules import crontab
+from django.core.management.utils import get_random_secret_key
+
+load_dotenv("./env/.env-local")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,13 +26,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7d-=+1rr(1jdx)mngv^+0(j1r%inmaq#kl@rbudy$hi_&%08-_'
+SECRET_KEY = os.environ.get("SECRET_KEY", default=get_random_secret_key())
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = bool(os.environ.get("DEBUG", default=True))
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS").split(" ")
 
 # Application definition
 
@@ -40,13 +45,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'client.apps.ClientConfig',
     'project',
-    'jquery',
     'cities_light',
     'phonenumber_field',
-    'bootstrap5',
     'bootstrap_datepicker_plus',
     'django_select2',
-    'django_prose_editor'
+    'django_prose_editor',
+    'django_celery_beat',
+    'django_celery_results'
 ]
 
 MIDDLEWARE = [
@@ -89,13 +94,61 @@ DATABASES = {
         'OPTIONS': {
             'options': '-c search_path=django'
         },
-        'NAME': 'daw',
-        'USER': 'daw_user',
-        'PASSWORD': 'daw_user',
-        'HOST': 'localhost',
-        'PORT': '5432'
+        'NAME': os.environ.get("POSTGRES_DATABASE"),
+        'USER': os.environ.get("POSTGRES_USER"),
+        'PASSWORD': os.environ.get("POSTGRES_PASSWORD"),
+        'HOST': os.environ.get("POSTGRES_HOST"),
+        'PORT': os.environ.get("POSTGRES_PORT")
     }
 }
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.environ.get("REDIS_URL") + "/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    },
+    "select2": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.environ.get("REDIS_URL") + "/2",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+CELERY_BROKER_URL = os.environ.get("REDIS_URL") + "/0"
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_BACKEND = "django-db"
+CELERY_TIMEZONE = "UTC"
+
+
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_BEAT_SCHEDULE = {
+    "delete_unconfirmed_users": {
+        "task": "client.tasks.delete_unconfirmed_users",
+        "schedule": crontab(hour="*/24")
+    },
+    "send_newsletter_emails": {
+        "task": "client.tasks.send_newsletter_emails",
+        "schedule": crontab(day_of_week="monday", hour="14"),
+        'args': ("emails/newsletter-weekly.html", "Online store - Newsletter")
+    },
+    "calculate_discounts": {
+        "task": "client.tasks.calculate_discounts",
+        "schedule": crontab(minute="*/15")
+    },
+    "delete_expired_promotions": {
+        "task": "client.tasks.delete_expired_promotions",
+        "schedule": crontab(day_of_month="1")
+    }
+}
+
+SELECT2_CACHE_BACKEND = "select2"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -120,13 +173,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
@@ -138,6 +187,8 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Logging
 
 LOGGING = {
     'version': 1,
@@ -183,20 +234,28 @@ LOGGING = {
     },
 }
 
+# Authentication
+
 LOGIN_URL = "/signin"
 AUTH_USER_MODEL = "client.ProfileModel"
+FORBIDDEN_USERNAMES = os.environ.get("FORBIDDEN_USERNAMES")
+
+# Emaling system
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'alxael56@gmail.com'
-EMAIL_HOST_PASSWORD = 'ppnv umrv qimm ndaj'
-DEFAULT_FROM_EMAIL = 'Online Store <alxael56@gmail.com>'
+EMAIL_HOST = os.environ.get("EMAIL_HOST")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT"))
+EMAIL_USE_TLS = bool(os.environ.get("EMAIL_USE_TLS"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 
-OFFER_VIEW_USER_HISTORY_SIZE = 10
-OFFER_VIEW_PROMOTION_MINIMUM_INTEREST = 3
+# Client specifics
 
-SIGNIN_FAILED_ATTEMPTS_COUNT_TRIGGER = 3
+OFFER_VIEW_USER_HISTORY_SIZE = int(os.environ.get("OFFER_VIEW_USER_HISTORY_SIZE", default=10))
+OFFER_VIEW_PROMOTION_MINIMUM_INTEREST = int(os.environ.get("OFFER_VIEW_PROMOTION_MINIMUM_INTEREST", default=3))
+SIGNIN_FAILED_ATTEMPTS_COUNT_TRIGGER = int(os.environ.get("SIGNIN_FAILED_ATTEMPTS_COUNT_TRIGGER", default=3))
 
-ADMINS = [("alxael", "alex.aelenei04@gmail.com")]
-FORBIDDEN_USERNAMES = ["admin", "adm", "manager"]
+# Administration
+
+ADMINS = zip(os.environ.get("ADMINS_USERNAMES").split(" "), os.environ.get("ADMINS_EMAILS").split(" "))

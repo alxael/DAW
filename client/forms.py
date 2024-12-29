@@ -182,7 +182,7 @@ class SignupForm(UserCreationForm):
 
     class Meta:
         model = ProfileModel
-        fields = ("username", "email", "first_name", "last_name", "date_of_birth", "password1", "password2", "country", "city", "address_line_one", "address_line_two", "phone_number")
+        fields = ("username", "email", "first_name", "last_name", "date_of_birth", "password1", "password2", "country", "city", "address_line_one", "address_line_two", "phone_number", "is_following_newsletter")
         widgets = {
             "country": CountryChoiceWidget,
             "city": CityChoiceWidget,
@@ -192,7 +192,8 @@ class SignupForm(UserCreationForm):
             "address_line_one": "Address first line",
             "address_line_two": "Address second line",
             "date_of_birth": "Date of birth",
-            "phone_number": "Phone number (with country code)"
+            "phone_number": "Phone number (with country code)",
+            "is_following_newsletter": "Receive newsletter emails"
         }
         validators = {
             "username": [username],

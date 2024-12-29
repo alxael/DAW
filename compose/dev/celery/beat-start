@@ -1,0 +1,8 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+
+python manage.py migrate
+rm -f './celerybeat.pid'
+celery -A project beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler

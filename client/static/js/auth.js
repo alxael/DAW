@@ -39,6 +39,7 @@ async function signup() {
   }).then((data) => data.json());
 
   if (response.success) {
+    $(window).scrollTop();
     $("#background").empty();
     const successCard = $("<div></div>").addClass(
       "card p-3 text-white bg-success"

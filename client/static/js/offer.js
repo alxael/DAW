@@ -29,13 +29,13 @@ async function filterOffers() {
         "col gx-2 offer-card-wrapper"
       );
       const offerCard = $("<div></div>")
-        .addClass("card offer-card text-bg-light")
+        .addClass("card offer-card")
         .attr("id", offer.uuid);
       offerCard.on("mouseenter", function () {
-        $(this).addClass("bg-light");
+        $(this).addClass("text-bg-light");
       });
       offerCard.on("mouseleave", function () {
-        $(this).removeClass("bg-light");
+        $(this).removeClass("text-bg-light");
       });
       offerCard.on("click", function () {
         window.location.href = offerViewUrl.replace("uuid", $(this).attr("id"));
@@ -69,6 +69,10 @@ async function filterOffers() {
       const cardPurchaseButton = $("<button></button>")
         .attr("type", "button")
         .addClass("btn btn-primary ms-auto");
+      cardPurchaseButton.on("click", function () {
+        addToCart();
+      });
+
       const cardPurchaseButtonIcon = $("<i></i>").addClass("bi bi-cart");
       cardPurchaseButton.append(cardPurchaseButtonIcon);
       cardFooter.append(cardPrice);

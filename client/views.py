@@ -7,17 +7,17 @@ from django.conf import settings
 from django.urls import reverse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, update_session_auth_hash
+from django.contrib.auth.models import Permission
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponseNotFound
 from django.contrib.auth.decorators import login_required
-from django.core.mail import EmailMessage, EmailMultiAlternatives, get_connection, mail_admins
 from django.core.paginator import Paginator, EmptyPage
-from django.core.exceptions import PermissionDenied
-from django.template.loader import render_to_string, get_template, TemplateDoesNotExist
+from django.template.loader import get_template, TemplateDoesNotExist
 from django.db.models import Count
 from ipware import get_client_ip
 from .models import ProductModel, UnitModel, ProfileModel, OfferModel, OfferViewModel, PromotionModel
 from .forms import FilterProductsForm, ProductAddEditForm, FilterOffersForm, FilterPromotionsForm, PromotionAddEditForm, ContactForm, SigninForm, SignupForm, ChangePasswordForm
 from .dto import ProductListDto, OfferListDto, PromotionListDto
+from .tasks import send_email_html, send_promotion_emails_html, send_email_admins_html, calculate_discounts
 
 # Utilities
 
@@ -39,53 +39,42 @@ def get_ip_address(request):
     return ip_address
 
 
-def mail_admins_html(template_path, template_data, subject):
-    content = render_to_string(template_path, template_data)
-    mail_admins(subject=subject, message=content, html_message=content, fail_silently=False)
-    logger.info(f"Mailed admins! Subject: {subject}")
-
-
 def get_response_forbidden(request, template_data):
     template_path = "pages/responses/403.html"
     template_data["username"] = None if not request.user else request.user.username
     return HttpResponseForbidden(render(request, template_path, template_data))
 
 
-# def check_user(request, signed_in, is_staff, is_superuser):
-#     username = None if not request.user else request.user.username
-#     template_path = "pages/responses/403.html"
-#     if signed_in and not request.user and not request.user.is_authenticated:
-#         return HttpResponseForbidden(
-#             render(
-#                 request,
-#                 template_path,
-#                 {
-#                     "username": username,
-#                     "custom_message": "You do not have access to this resource."
-#                 }
-#             ))
-#     if is_staff and not request.user.is_staff and not request.user.is_superuser:
-#         return HttpResponseForbidden(
-#             render(
-#                 request,
-#                 template_path,
-#                 {
-#                     "username": username,
-#                     "title": "Access forbidden",
-#                     "custom_message": "You do not have access to this resource."
-#                 }
-#             ))
-#     if is_superuser and not request.user.is_superuser:
-#         return HttpResponseForbidden(
-#             render(
-#                 request,
-#                 template_path,
-#                 {
-#                     "username": username,
-#                     "title": "Access forbidden"
-#                 }
-#             ))
-#     return True
+def user_authenticated(request):
+    if not request.user:
+        return get_response_forbidden(request, {"title": "Forbidden", "custom_message": "You must be authenticated to view this page!"})
+    return None
+
+
+def user_permissions(request, permissions):
+    for permission in permissions:
+        if not request.user.has_perm(f"client.{permission}"):
+            permission_description = Permission.objects.all().get(codename=permission).name[3:]
+            logger.info(permission_description)
+            return get_response_forbidden(request, {"custom_message": f"You do not have the permissions to {permission_description}!"})
+    return None
+
+# Pagination
+
+
+def get_paginated_objects(request, objects_list):
+    page_number = request.GET.get("page_number", 1)
+    records_per_page = request.GET.get("records_per_page", 10)
+    paginator = Paginator(objects_list, per_page=records_per_page)
+    try:
+        objects_list = paginator.page(page_number).object_list
+        pages = list(paginator.get_elided_page_range(page_number, on_each_side=1, on_ends=2))
+    except EmptyPage:
+        logger.critical("Invalid page number! Could not paginate objects, reverting to default values.")
+        page_number, records_per_page = 1, 10
+        objects_list = paginator.page(page_number).object_list
+        pages = list(paginator.get_elided_page_range(page_number, on_each_side=1, on_ends=2))
+    return (objects_list, pages)
 
 
 # Presentation
@@ -143,11 +132,13 @@ def sign_up(request):
         sign_up_form = SignupForm(request.POST)
 
         if sign_up_form.data["username"] in settings.FORBIDDEN_USERNAMES and not sign_up_form.is_valid():
-            mail_admins_html(
+            send_email_admins_html.delay(
                 "emails/signup-forbidden-username.html",
                 {"username": sign_up_form.data["username"], "ip_address": get_ip_address(request), "datetime": datetime.now()},
                 "Suspicious sign up activity detected"
             )
+            sign_up_form.add_error("username", "You can not sign up with this name!")
+            return JsonResponse({"success": False, "errors": sign_up_form.errors})
 
         if sign_up_form.is_valid():
             user = sign_up_form.save(commit=False)
@@ -156,15 +147,12 @@ def sign_up(request):
             relative_url = reverse('email-confirmation', args=[user.email_confirmation_code])
             absolute_url = request.build_absolute_uri(relative_url)
 
-            content_data = {"first_name": user.first_name, "confirmation_url": absolute_url}
-            content = render_to_string("emails/email-confirmation.html", content_data)
-            confirmation_email = EmailMessage(
-                subject="Online Store - Account confirmation",
-                body=content,
-                to=[user.email]
+            send_email_html.delay(
+                "emails/email-confirmation.html",
+                {"first_name": user.first_name, "confirmation_url": absolute_url},
+                "Online Store - Account confirmation",
+                [user.email]
             )
-            confirmation_email.content_subtype = "html"
-            confirmation_email.send(fail_silently=False)
 
             user.save()
             add_data_to_session(request, user)
@@ -173,6 +161,8 @@ def sign_up(request):
         else:
             return JsonResponse({"success": False, "errors": sign_up_form.errors})
     elif request.method == "GET":
+        if request.user and request.user.is_authenticated:
+            return redirect("profile")
         sign_up_form = SignupForm()
         return render(request, "pages/auth/signup.html", {"form": sign_up_form})
     else:
@@ -187,7 +177,7 @@ def sign_in(request):
         request.session["sign_in_attempts"] = sign_in_attempts
 
         if sign_in_attempts % settings.SIGNIN_FAILED_ATTEMPTS_COUNT_TRIGGER == 0 and not sign_in_form.is_valid():
-            mail_admins_html(
+            send_email_admins_html.delay(
                 "emails/signin-suspicious-activity.html",
                 {"username": sign_in_form.data["username"], "ip_address": get_ip_address(request), "datetime": datetime.now()},
                 "Suspicious sign in activity detected"
@@ -268,22 +258,6 @@ def change_password(request):
 def profile(request):
     return render(request, "pages/auth/profile.html")
 
-# Pagination
-
-
-def get_paginated_objects(request, objects_list):
-    page_number = request.GET.get("page_number", 1)
-    records_per_page = request.GET.get("records_per_page", 10)
-    paginator = Paginator(objects_list, per_page=records_per_page)
-    try:
-        objects_list = paginator.page(page_number).object_list
-        pages = list(paginator.get_elided_page_range(page_number, on_each_side=1, on_ends=2))
-    except EmptyPage:
-        logger.critical("Invalid page number! Could not paginate objects, reverting to default values.")
-        page_number, records_per_page = 1, 10
-        objects_list = paginator.page(page_number).object_list
-        pages = list(paginator.get_elided_page_range(page_number, on_each_side=1, on_ends=2))
-    return (objects_list, pages)
 
 # Product
 
@@ -316,8 +290,13 @@ def process_product_form(product_form):
 
 
 def product_list(request):
-    if not request.user or not request.user.has_perm("view_productmodel"):
-        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to view the products list!"})
+    is_authenticated = user_authenticated(request)
+    if is_authenticated:
+        return is_authenticated
+
+    has_permissions = user_permissions(request, ["view_productmodel"])
+    if has_permissions:
+        return has_permissions
 
     all_products = ProductModel.objects.all().order_by("uuid")
     if request.method == 'POST':
@@ -395,9 +374,9 @@ def product_delete(request, product_uuid):
 
 # Offer
 
-
 def offer_list(request):
     all_offers = OfferModel.objects.all().order_by("uuid")
+
     if request.method == 'POST':
         filter_form = FilterOffersForm(request.POST)
         if filter_form.is_valid():
@@ -449,6 +428,8 @@ def process_promotion_form(promotion_form):
         promotion.discount = discount
 
         promotion.save()
+        
+        calculate_discounts.delay()
 
         if promotion.get_active():
             offers = OfferModel.objects.all().filter(product__categories__in=[promotion.category])
@@ -460,11 +441,7 @@ def process_promotion_form(promotion_form):
             for offer_views_user in offer_views_users:
                 if offer_views_user.get("view_count") >= settings.OFFER_VIEW_PROMOTION_MINIMUM_INTEREST:
                     user_uuids.add(offer_views_user.get("user"))
-
-            for offer in offers:
-                offer.discount = max(offer.discount, promotion.discount)
-                offer.save()
-
+                    
             users = ProfileModel.objects.all().filter(uuid__in=list(user_uuids))
 
             promotion_email_path = "emails/category-default.html"
@@ -473,29 +450,18 @@ def process_promotion_form(promotion_form):
                 get_template(custom_promotion_email_path)
                 promotion_email_path = custom_promotion_email_path
             except TemplateDoesNotExist as exception:
-                mail_admins_html(
+                send_email_admins_html.delay(
                     "emails/promotion-template-does-not-exist.html",
                     {"category_name": promotion.category.name, "email_template": custom_promotion_email_path, "full_error": str(exception)},
                     "Promotion email template does not exist"
                 )
 
-            promotion_emails = []
-            for user in users:
-                content_data = {"category_name": promotion.category.name, "expiration_date": promotion.end_date, "discount": promotion.discount * 100, "first_name": user.first_name}
-                content = render_to_string(promotion_email_path, content_data)
-                promotion_email = EmailMultiAlternatives(
-                    subject=promotion_form.cleaned_data["subject"],
-                    body=content,
-                    to=[user.email]
-                )
-                promotion_email.content_subtype = "html"
-                promotion_emails.append(promotion_email)
-
-            connection = get_connection()
-            connection.open()
-            connection.send_messages(promotion_emails)
-            connection.close()
-
+            send_promotion_emails_html.delay(
+                promotion_email_path,
+                users,
+                promotion,
+                promotion_form.cleaned_data["subject"]
+            )
             logger.info(f"Sent promotion emails for {promotion.name}")
 
         return JsonResponse({'success': True})
@@ -573,7 +539,7 @@ def promotion_delete(request, promotion_uuid):
         try:
             existing_promotion = PromotionModel.objects.get(uuid=promotion_uuid)
             existing_promotion.delete()
-            # offer discounts should be updated as well
+            calculate_discounts.delay()
             return JsonResponse({'success': True})
         except ...:
             return JsonResponse({'success': False})

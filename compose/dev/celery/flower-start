@@ -1,0 +1,15 @@
+set -o errexit
+set -o nounset
+
+worker_ready() {
+    celery -A project inspect ping
+}
+
+until worker_ready; do
+    echo >&2 'Celery workers not available'
+    sleep 1
+done
+echo >&2 'Celery workers is available'
+
+python manage.py migrate
+celery -A project flower
