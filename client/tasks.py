@@ -120,7 +120,7 @@ def calculate_discounts(self):
     for offer in offers:
         discount = 0
         for promotion in active_promotions:
-            if promotion.category in offer.product.categories:
+            if promotion.category in offer.product.categories.all():
                 discount = max(discount, promotion.discount)
         offer.discount = discount
         offer.save()

@@ -1,17 +1,27 @@
+$(document).ready(function () {
+  if (window.location.pathname === productListUrl) {
+    filterProducts();
+    createConfirmDeleteModal(
+      "delete-product-modal",
+      "Delete product",
+      "Are you sure you want to delete this product? After deletion, the product can not be restored!"
+    );
+    $("#delete-product-modal-button").on("click", async function () {
+      const uuid = $(this).data("uuid");
+      const response = await deleteProduct(uuid);
+      if (response) {
+        $(`#${uuid}`).remove();
+        filterProducts();
+      }
+    });
+    setPaginationRecordsPerPage(filterProducts);
+  }
+});
+
 async function addProduct() {
   const formElement = document.forms["add-product-form"];
   const formData = new FormData(formElement);
-
-  const response = await fetch(window.location.href, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-      "X-CSRFToken": csrfToken,
-    },
-    body: formData,
-  }).then((data) => data.json());
+  const response = await fetchData("POST", window.location.href, formData);
 
   cleanUpFormErrors();
   $("#response-success").remove();
@@ -44,17 +54,7 @@ async function addProduct() {
 async function editProduct() {
   const formElement = document.forms["edit-product-form"];
   const formData = new FormData(formElement);
-
-  const response = await fetch(window.location.href, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-      "X-CSRFToken": csrfToken,
-    },
-    body: formData,
-  }).then((data) => data.json());
+  const response = await fetchData("POST", window.location.href, formData);
 
   cleanUpFormErrors();
   $("#response-success").remove();
@@ -83,15 +83,11 @@ async function editProduct() {
 }
 
 async function deleteProduct(uuid) {
-  const response = await fetch(productDeleteUrl.replace("uuid", uuid), {
-    method: "DELETE",
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-      "X-CSRFToken": csrfToken,
-    },
-  }).then((data) => data.json());
+  const response = await fetchData(
+    "DELETE",
+    productDeleteUrl.replace("uuid", uuid),
+    null
+  );
   return response.success;
 }
 
@@ -103,16 +99,7 @@ async function filterProducts() {
   url.searchParams.set("page_number", pageNumber);
   url.searchParams.set("records_per_page", recordsPerPage);
 
-  const response = await fetch(url.toString(), {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-      "X-CSRFToken": csrfToken,
-    },
-    body: formData,
-  }).then((data) => data.json());
+  const response = await fetchData("POST", url.toString(), formData);
 
   $("#products-list").empty();
   if (response.success) {
@@ -167,7 +154,7 @@ async function filterProducts() {
       for (const category of product.categories) {
         const categoryTag = $("<span></span>")
           .text(category.name)
-          .addClass("badge bg-primary p-2 m-1");
+          .addClass("badge text-bg-primary p-2 m-1");
         categoryTagList.append(categoryTag);
       }
       cardBody.append(categoryTagList);
@@ -177,7 +164,7 @@ async function filterProducts() {
       $("#products-list").append(productCard);
     }
   } else {
-    console.log("Failed!");
+    // replace with toast
   }
 
   return true;
@@ -188,23 +175,3 @@ const clearFilters = () => {
   resetPagination();
   filterProducts();
 };
-
-$(document).ready(function () {
-  if (window.location.pathname === productListUrl) {
-    filterProducts();
-    createConfirmDeleteModal(
-      "delete-product-modal",
-      "Delete product",
-      "Are you sure you want to delete this product? After deletion, the product can not be restored!"
-    );
-    $("#delete-product-modal-button").on("click", async function () {
-      const uuid = $(this).data("uuid");
-      const response = await deleteProduct(uuid);
-      if (response) {
-        $(`#${uuid}`).remove();
-        filterProducts();
-      }
-    });
-  }
-  setPaginationRecordsPerPage(filterProducts);
-});

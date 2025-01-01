@@ -1,3 +1,23 @@
+$(document).ready(function () {
+  if (window.location.pathname === promotionListUrl) {
+    filterPromotions();
+    createConfirmDeleteModal(
+      "delete-promotion-modal",
+      "Delete promotion",
+      "Are you sure you want to delete this promotion? After deletion, the promotion can not be restored!"
+    );
+    $("#delete-promotion-modal-button").on("click", async function () {
+      const uuid = $(this).data("uuid");
+      const response = await deletePromotion(uuid);
+      if (response) {
+        $(`#${uuid}`).remove();
+        filterPromotions();
+      }
+    });
+    setPaginationRecordsPerPage(filterPromotions);
+  }
+});
+
 async function addPromotion() {
   const formElement = document.forms["add-promotion-form"];
   const formData = new FormData(formElement);
@@ -135,9 +155,9 @@ async function filterPromotions() {
 
       const cardStatus = $("<span></span>").addClass("mx-2 badge");
       if (promotion.active) {
-        cardStatus.addClass("bg-success").text("Active");
+        cardStatus.addClass("text-bg-success").text("Active");
       } else {
-        cardStatus.addClass("bg-secondary").text("Inactive");
+        cardStatus.addClass("text-bg-secondary").text("Inactive");
       }
       cardTitle.append(cardStatus);
 
@@ -200,23 +220,3 @@ const clearFilters = () => {
   resetPagination();
   filterPromotions();
 };
-
-$(document).ready(function () {
-  if (window.location.pathname === promotionListUrl) {
-    filterPromotions();
-    createConfirmDeleteModal(
-      "delete-promotion-modal",
-      "Delete promotion",
-      "Are you sure you want to delete this promotion? After deletion, the promotion can not be restored!"
-    );
-    $("#delete-promotion-modal-button").on("click", async function () {
-      const uuid = $(this).data("uuid");
-      const response = await deletePromotion(uuid);
-      if (response) {
-        $(`#${uuid}`).remove();
-        filterPromotions();
-      }
-    });
-  }
-  setPaginationRecordsPerPage(filterPromotions);
-});

@@ -126,7 +126,6 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_TIMEZONE = "UTC"
 
-
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 CELERY_BEAT_SCHEDULE = {
     "delete_unconfirmed_users": {
@@ -144,7 +143,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     "delete_expired_promotions": {
         "task": "client.tasks.delete_expired_promotions",
-        "schedule": crontab(day_of_month="1")
+        "schedule": crontab(0, 0, day_of_month="1")
     }
 }
 
@@ -255,7 +254,8 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 OFFER_VIEW_USER_HISTORY_SIZE = int(os.environ.get("OFFER_VIEW_USER_HISTORY_SIZE", default=10))
 OFFER_VIEW_PROMOTION_MINIMUM_INTEREST = int(os.environ.get("OFFER_VIEW_PROMOTION_MINIMUM_INTEREST", default=3))
 SIGNIN_FAILED_ATTEMPTS_COUNT_TRIGGER = int(os.environ.get("SIGNIN_FAILED_ATTEMPTS_COUNT_TRIGGER", default=3))
+DEFAULT_CURRENCY_CODE = os.environ.get("DEFAULT_CURRENCY_CODE", default="RON")
 
 # Administration
 
-ADMINS = zip(os.environ.get("ADMINS_USERNAMES").split(" "), os.environ.get("ADMINS_EMAILS").split(" "))
+ADMINS = list(zip(os.environ.get("ADMINS_USERNAMES").split(" "), os.environ.get("ADMINS_EMAILS").split(" ")))

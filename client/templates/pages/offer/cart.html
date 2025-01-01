@@ -1,0 +1,67 @@
+{% extends 'pages/base.html' %}
+{% load tags %}
+{% load static %}
+
+{% block scripts %}
+  <script>
+    const cartUrl = "{% url 'cart' %}"
+    const offerListUrl = "{% url 'offer-list' %}"
+    const offerViewUrl = "{% url 'offer-view' 'uuid' %}"
+  </script>
+  <link rel="stylesheet" href="{% static 'css/offer.css' %}" />
+  <script src="{% static 'js/offer.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="container min-vh-100 col col-md-8 pt-5">
+    <h1 class="mt-5 mb-3">Cart</h1>
+    <div id="cart-list"></div>
+    <h1 class="mt-5 mb-3">Order information</h1>
+    <div class="card mb-3">
+      <ul class="list-group list-group">
+        <li class="list-group-item">
+          <h4>Contact information</h4>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item">
+              Full name:{% if request.session.fullname %}
+                {{ request.session.fullname }}
+              {% else %}
+                {{ '-' }}
+              {% endif %}
+            </li>
+            <li class="list-group-item">Email: {{ request.session.email }}</li>
+            <li class="list-group-item">
+              Phone number:{% if request.session.phone_number %}
+                {{ request.session.phone_number }}
+              {% else %}
+                {{ '-' }}
+              {% endif %}
+            </li>
+          </ul>
+        </li>
+        <li class="list-group-item">
+          <h4>Address and billing</h4>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item">
+              Location:{% if request.session.location %}
+                {{ request.session.location }}
+              {% else %}
+                {{ '-' }}
+              {% endif %}
+            </li>
+            <li class="list-group-item">
+              Address:{% if request.session.address %}
+                {{ request.session.address }}
+              {% else %}
+                {{ '-' }}
+              {% endif %}
+            </li>
+            <li class="list-group-item">
+              Total price: <span id="cart-total-price" class="text-danger"></span>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}

@@ -4,7 +4,6 @@
 
 {% block scripts %}
   <script>
-    const csrfToken = '{{ csrf_token }}'
     const promotionListUrl = "{% url 'promotion-list' %}"
     const promotionAddUrl = "{% url 'promotion-add' %}"
     const promotionDeleteUrl = "{% url 'promotion-delete' 'uuid' %}"

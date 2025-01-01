@@ -4,7 +4,7 @@
 
 {% block scripts %}
   <script>
-    const csrfToken = '{{ csrf_token }}'
+    const cartUrl = "{% url 'cart' %}"
     const offerListUrl = "{% url 'offer-list' %}"
     const offerViewUrl = "{% url 'offer-view' 'uuid' %}"
   </script>
@@ -13,8 +13,8 @@
 {% endblock %}
 
 {% block content %}
-  <div class="container background">
-    <div class="title mb-3">
+  <div class="container min-vh-100 col col-md-12 pt-5">
+    <div class="mt-5 mb-3">
       <h1>Offers</h1>
     </div>
     <form class="filter-form" id="filter-form" name="filter-form" onsubmit="event.preventDefault(); filterOffers();">

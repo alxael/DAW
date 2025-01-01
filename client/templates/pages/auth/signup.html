@@ -4,7 +4,6 @@
 
 {% block scripts %}
   <script>
-    const csrfToken = '{{ csrf_token }}'
     const signInUrl = "{% url 'sign-in' %}"
     const signUpUrl = "{% url 'sign-up' %}"
     const signOutUrl = "{% url 'sign-out' %}"
@@ -16,8 +15,8 @@
 {% endblock %}
 
 {% block content %}
-  <div class="container background-form" id="background">
-    <h1>Sign up</h1>
+  <div class="container min-vh-100 col col-md-6 pt-5" id="background">
+    <h1 class="mt-5">Sign up</h1>
     <form class="card p-3" id="sign-up-form" name="sign-up-form" onsubmit="event.preventDefault(); signup();">
       {% csrf_token %} {{ form.media }}
       <div class="row align-items-start mb-3">

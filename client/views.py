@@ -1,7 +1,9 @@
 import re
 import uuid
+import json
 import logging
 from datetime import datetime
+from ipware import get_client_ip
 from django import forms
 from django.conf import settings
 from django.urls import reverse
@@ -9,14 +11,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.models import Permission
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponseNotFound
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.db.models import Count
-from ipware import get_client_ip
-from .models import ProductModel, UnitModel, ProfileModel, OfferModel, OfferViewModel, PromotionModel
+from .models import ProductModel, UnitModel, ProfileModel, OfferModel, OfferViewModel, PromotionModel, StockModel, CurrencyModel
 from .forms import FilterProductsForm, ProductAddEditForm, FilterOffersForm, FilterPromotionsForm, PromotionAddEditForm, ContactForm, SigninForm, SignupForm, ChangePasswordForm
-from .dto import ProductListDto, OfferListDto, PromotionListDto
+from .dto import ProductListDto, OfferListDto, PromotionListDto, CurrencyListDto, CurrencyConversionModel
 from .tasks import send_email_html, send_promotion_emails_html, send_email_admins_html, calculate_discounts
 
 # Utilities
@@ -44,20 +44,35 @@ def get_response_forbidden(request, template_data):
     template_data["username"] = None if not request.user else request.user.username
     return HttpResponseForbidden(render(request, template_path, template_data))
 
-
-def user_authenticated(request):
-    if not request.user:
-        return get_response_forbidden(request, {"title": "Forbidden", "custom_message": "You must be authenticated to view this page!"})
-    return None
+# Custom decorators
 
 
-def user_permissions(request, permissions):
-    for permission in permissions:
-        if not request.user.has_perm(f"client.{permission}"):
-            permission_description = Permission.objects.all().get(codename=permission).name[3:]
-            logger.info(permission_description)
-            return get_response_forbidden(request, {"custom_message": f"You do not have the permissions to {permission_description}!"})
-    return None
+def signin_required(function):
+    def wrapper(request, *args, **kwargs):
+        if request.user.is_anonymous:
+            return get_response_forbidden(
+                request,
+                {
+                    "title": "Forbidden",
+                    "custom_message": "You must be authenticated to view this page!"
+                }
+            )
+        response = function(request, *args, **kwargs)
+        return response
+    return wrapper
+
+
+def permissions_required(permissions):
+    def decorator(function):
+        def wrapper(request, *args, **kwargs):
+            for permission in permissions:
+                if not request.user.has_perm(f"client.{permission}"):
+                    permission_description = Permission.objects.all().get(codename=permission).name[3:]
+                    return get_response_forbidden(request, {"custom_message": f"You do not have the permissions to {permission_description}!"})
+            response = function(request, *args, **kwargs)
+            return response
+        return wrapper
+    return decorator
 
 # Pagination
 
@@ -155,7 +170,6 @@ def sign_up(request):
             )
 
             user.save()
-            add_data_to_session(request, user)
 
             return JsonResponse({"success": True})
         else:
@@ -191,10 +205,12 @@ def sign_in(request):
                 sign_in_form.add_error(None, "You have not confirmed your email! Please check your inbox and confirm your email!")
                 return JsonResponse({'success': False, 'errors': sign_in_form.errors})
 
+            if user.is_blocked:
+                sign_in_form.add_error(None, "Your account is blocked! Please contact an administrator to review your situation.")
+                return JsonResponse({'success': False, 'errors': sign_in_form.errors})
+
             session_expiry_time = 0 if not sign_in_form.cleaned_data["stay_signed_in"] else 24 * 60 * 60
             request.session.set_expiry(session_expiry_time)
-
-            add_data_to_session(request, user)
 
             request.session["sign_in_attempts"] = 0
             return JsonResponse({"success": True})
@@ -226,7 +242,7 @@ def email_confirmation(request, email_confirmation_uuid):
         return HttpResponseNotFound()
 
 
-@login_required
+@signin_required
 def sign_out(request):
     if request.method == "POST":
         logout(request)
@@ -236,7 +252,7 @@ def sign_out(request):
         return HttpResponseNotFound()
 
 
-@login_required
+@signin_required
 def change_password(request):
     if request.method == "POST":
         change_password_form = ChangePasswordForm(user=request.user, data=request.POST)
@@ -254,9 +270,13 @@ def change_password(request):
         return HttpResponseNotFound()
 
 
-@login_required
+@signin_required
 def profile(request):
-    return render(request, "pages/auth/profile.html")
+    if request.method == "GET":
+        add_data_to_session(request, request.user)
+        return render(request, "pages/auth/profile.html")
+    else:
+        return HttpResponseNotFound()
 
 
 # Product
@@ -289,15 +309,9 @@ def process_product_form(product_form):
         return JsonResponse({'success': False, 'errors': product_form.errors})
 
 
+@signin_required
+@permissions_required(["view_productmodel"])
 def product_list(request):
-    is_authenticated = user_authenticated(request)
-    if is_authenticated:
-        return is_authenticated
-
-    has_permissions = user_permissions(request, ["view_productmodel"])
-    if has_permissions:
-        return has_permissions
-
     all_products = ProductModel.objects.all().order_by("uuid")
     if request.method == 'POST':
         filter_form = FilterProductsForm(request.POST)
@@ -327,10 +341,9 @@ def product_list(request):
         return HttpResponseNotFound()
 
 
+@signin_required
+@permissions_required(["add_productmodel"])
 def product_add(request):
-    if not request.user or not request.user.has_perm("add_productmodel"):
-        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to add a product!"})
-
     if request.method == 'POST':
         add_form = ProductAddEditForm(request.POST)
         return process_product_form(add_form)
@@ -341,10 +354,9 @@ def product_add(request):
         return HttpResponseNotFound()
 
 
+@signin_required
+@permissions_required(["change_productmodel"])
 def product_edit(request, product_uuid):
-    if not request.user or not request.user.has_perm("edit_productmodel"):
-        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to edit a product!"})
-
     if request.method == 'POST':
         existing_product = ProductModel.objects.get(uuid=product_uuid)
         edit_form = ProductAddEditForm(request.POST, instance=existing_product)
@@ -358,10 +370,9 @@ def product_edit(request, product_uuid):
         return HttpResponseNotFound()
 
 
+@signin_required
+@permissions_required(["delete_productmodel"])
 def product_delete(request, product_uuid):
-    if not request.user or not request.user.has_perm("delete_productmodel"):
-        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to delete a product!"})
-
     if request.method == 'DELETE':
         try:
             existing_product = ProductModel.objects.get(uuid=product_uuid)
@@ -374,8 +385,12 @@ def product_delete(request, product_uuid):
 
 # Offer
 
+
 def offer_list(request):
     all_offers = OfferModel.objects.all().order_by("uuid")
+
+    currency_code = request.GET.get("currency", settings.DEFAULT_CURRENCY_CODE)
+    currency = CurrencyModel.objects.get(code=currency_code)
 
     if request.method == 'POST':
         filter_form = FilterOffersForm(request.POST)
@@ -391,7 +406,7 @@ def offer_list(request):
                         product__categories__in=[category.uuid]).distinct()
 
                 offers, pages = get_paginated_objects(request, all_offers)
-                offers = [OfferListDto(offer) for offer in offers]
+                offers = [OfferListDto(offer, currency) for offer in offers]
                 return JsonResponse({"success": True, 'offers': offers, 'pages': pages})
             except ...:
                 logger.critical("Could not return offer list!")
@@ -407,13 +422,37 @@ def offer_list(request):
 def offer_view(request, offer_uuid):
     if request.method == 'GET':
         offer = get_object_or_404(OfferModel, uuid=offer_uuid)
+
+        currency_code = request.GET.get("currency", settings.DEFAULT_CURRENCY_CODE)
+        currency = CurrencyModel.objects.get(code=currency_code)
+        currency_conversion = CurrencyConversionModel.objects.get(source=offer.currency, destination=currency)
+
         if request.user.is_authenticated:
             user_offer_views = OfferViewModel.objects.filter(user=request.user).order_by("date_time")
             offer_view = OfferViewModel(user=request.user, offer=offer)
             if user_offer_views.count() >= settings.OFFER_VIEW_USER_HISTORY_SIZE:
                 user_offer_views.first().delete()
             offer_view.save()
-        return render(request, 'pages/offer/offer-view.html', {'offer': offer})
+
+        return render(request, 'pages/offer/offer-view.html', {'offer': offer, 'currency_conversion': currency_conversion})
+    else:
+        return HttpResponseNotFound()
+
+# Cart
+
+
+@signin_required
+def cart(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+
+        currency_code = request.GET.get("currency", settings.DEFAULT_CURRENCY_CODE)
+        currency = CurrencyModel.objects.get(code=currency_code)
+
+        offers = OfferModel.objects.all().filter(uuid__in=data['offers'])
+        return JsonResponse({'offers': [OfferListDto(offer, currency) for offer in offers]})
+    elif request.method == 'GET':
+        return render(request, 'pages/offer/cart.html')
     else:
         return HttpResponseNotFound()
 
@@ -428,7 +467,7 @@ def process_promotion_form(promotion_form):
         promotion.discount = discount
 
         promotion.save()
-        
+
         calculate_discounts.delay()
 
         if promotion.get_active():
@@ -437,42 +476,45 @@ def process_promotion_form(promotion_form):
             offer_views = OfferViewModel.objects.all().filter(offer__in=offer_uuids)
             offer_views_users = offer_views.values('user', 'offer').order_by().annotate(view_count=Count('offer'))
 
+            # notifying users of promotion should be a separate endpoint
+
             user_uuids = set()
             for offer_views_user in offer_views_users:
                 if offer_views_user.get("view_count") >= settings.OFFER_VIEW_PROMOTION_MINIMUM_INTEREST:
                     user_uuids.add(offer_views_user.get("user"))
-                    
-            users = ProfileModel.objects.all().filter(uuid__in=list(user_uuids))
 
-            promotion_email_path = "emails/category-default.html"
-            custom_promotion_email_path = f"emails/category-{snake_case(promotion.category.name)}"
-            try:
-                get_template(custom_promotion_email_path)
-                promotion_email_path = custom_promotion_email_path
-            except TemplateDoesNotExist as exception:
-                send_email_admins_html.delay(
-                    "emails/promotion-template-does-not-exist.html",
-                    {"category_name": promotion.category.name, "email_template": custom_promotion_email_path, "full_error": str(exception)},
-                    "Promotion email template does not exist"
+            if len(user_uuids) > 0:
+                users = ProfileModel.objects.all().filter(uuid__in=list(user_uuids))
+
+                promotion_email_path = "emails/category-default.html"
+                custom_promotion_email_path = f"emails/category-{snake_case(promotion.category.name)}"
+                try:
+                    get_template(custom_promotion_email_path)
+                    promotion_email_path = custom_promotion_email_path
+                except TemplateDoesNotExist as exception:
+                    send_email_admins_html.delay(
+                        "emails/promotion-template-does-not-exist.html",
+                        {"category_name": promotion.category.name, "email_template": custom_promotion_email_path, "full_error": str(exception)},
+                        "Promotion email template does not exist"
+                    )
+
+                send_promotion_emails_html.delay(
+                    promotion_email_path,
+                    users,
+                    promotion,
+                    promotion_form.cleaned_data["subject"]
                 )
-
-            send_promotion_emails_html.delay(
-                promotion_email_path,
-                users,
-                promotion,
-                promotion_form.cleaned_data["subject"]
-            )
-            logger.info(f"Sent promotion emails for {promotion.name}")
-
+                logger.info(f"Sent promotion emails for {promotion.name}")
+            else:
+                logger.warning("No users to send promotion to!")
         return JsonResponse({'success': True})
     else:
         return JsonResponse({'success': False, 'errors': promotion_form.errors})
 
 
+@signin_required
+@permissions_required(["view_promotionmodel"])
 def promotion_list(request):
-    if not request.user or not request.user.has_perm("view_promotionmodel"):
-        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to view the promotions list!"})
-
     all_promotions = PromotionModel.objects.all().order_by("uuid")
     if request.method == 'POST':
         filter_form = FilterPromotionsForm(request.POST)
@@ -501,10 +543,9 @@ def promotion_list(request):
         return HttpResponseNotFound()
 
 
+@signin_required
+@permissions_required(["add_promotionmodel"])
 def promotion_add(request):
-    if not request.user or not request.user.has_perm("add_promotionmodel"):
-        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to add a promotion!"})
-
     if request.method == 'POST':
         add_form = PromotionAddEditForm(request.POST)
         return process_promotion_form(add_form)
@@ -515,10 +556,9 @@ def promotion_add(request):
         return HttpResponseNotFound()
 
 
+@signin_required
+@permissions_required(["change_promotionmodel"])
 def promotion_edit(request, promotion_uuid):
-    if not request.user or not request.user.has_perm("edit_promotionmodel"):
-        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to edit a promotion!"})
-
     if request.method == 'POST':
         existing_promotion = PromotionModel.objects.get(uuid=promotion_uuid)
         edit_form = PromotionAddEditForm(request.POST, instance=existing_promotion)
@@ -531,10 +571,9 @@ def promotion_edit(request, promotion_uuid):
         return HttpResponseNotFound()
 
 
+@signin_required
+@permissions_required(["delete_promotionmodel"])
 def promotion_delete(request, promotion_uuid):
-    if not request.user or not request.user.has_perm("delete_promotionmodel"):
-        return get_response_forbidden(request, {"custom_message": "You do not have the permissions to delete a promotion!"})
-
     if request.method == 'DELETE':
         try:
             existing_promotion = PromotionModel.objects.get(uuid=promotion_uuid)
@@ -543,5 +582,30 @@ def promotion_delete(request, promotion_uuid):
             return JsonResponse({'success': True})
         except ...:
             return JsonResponse({'success': False})
+    else:
+        return HttpResponseNotFound()
+
+# Stock
+
+
+def stock_list_offers(request):
+    if request.method == "GET":
+        product_stock = {product.uuid.__str__(): 0 for product in ProductModel.objects.all()}
+        stocks = StockModel.objects.all()
+        for stock in stocks:
+            product_stock[stock.product.uuid.__str__()] += int(stock.quantity)
+        offer_product = {offer.uuid.__str__(): offer.product.uuid.__str__() for offer in OfferModel.objects.all()}
+        return JsonResponse({"product_stock": product_stock, "offer_product": offer_product})
+    else:
+        return HttpResponseNotFound()
+
+
+# Currency
+
+def currency_list(request):
+    if request.method == "GET":
+        currencies = CurrencyModel.objects.all()
+        currencies_list = [CurrencyListDto(currency) for currency in currencies]
+        return JsonResponse({"currencies": currencies_list})
     else:
         return HttpResponseNotFound()

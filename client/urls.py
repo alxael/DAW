@@ -36,11 +36,22 @@ promotion_urlpatterns = [
     path("delete/<promotion_uuid>", views.promotion_delete, name="promotion-delete")
 ]
 
+stock_urlpatterns = [
+    path("list/offers", views.stock_list_offers, name="stock-list-offers")
+]
+
+currency_urlpatterns = [
+    path("list", views.currency_list, name="currency-list")
+]
+
 urlpatterns = [
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path("", views.presentation, name="presentation"),
+    path("cart/", views.cart, name="cart"),
     path("", include(auth_urlpatterns)),
     path("product/", include(product_urlpatterns)),
     path("offer/", include(offer_urlpatterns)),
-    path("promotion/", include(promotion_urlpatterns))
+    path("promotion/", include(promotion_urlpatterns)),
+    path("stock/", include(stock_urlpatterns)),
+    path("currency", include(currency_urlpatterns))
 ]

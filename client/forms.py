@@ -12,7 +12,7 @@ from django_select2 import forms as select2
 from django_prose_editor.fields import ProseEditorFormField
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm, AuthenticationForm, PasswordChangeForm
 from cities_light.models import Country, City
-from .models import CategoryModel, UnitModel, ProductModel, ProfileModel, OfferModel, PromotionModel
+from .models import CategoryModel, UnitModel, ProductModel, ProfileModel, OfferModel, PromotionModel, PROFILE_FIELDS
 
 logger = logging.getLogger('django')
 
@@ -182,7 +182,21 @@ class SignupForm(UserCreationForm):
 
     class Meta:
         model = ProfileModel
-        fields = ("username", "email", "first_name", "last_name", "date_of_birth", "password1", "password2", "country", "city", "address_line_one", "address_line_two", "phone_number", "is_following_newsletter")
+        fields = (
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "date_of_birth",
+            "password1",
+            "password2",
+            "country",
+            "city",
+            "address_line_one",
+            "address_line_two",
+            "phone_number",
+            "is_following_newsletter"
+        )
         widgets = {
             "country": CountryChoiceWidget,
             "city": CityChoiceWidget,
@@ -202,15 +216,22 @@ class SignupForm(UserCreationForm):
         }
 
 
-class ProfileChangeForm(UserChangeForm):
-
-    class Meta:
-        model = ProfileModel
-        fields = ("username", "email")
-
-
 class ChangePasswordForm(PasswordChangeForm):
     pass
+
+
+class ProfileChangeAdminForm(forms.ModelForm):
+    class Meta:
+        model = ProfileModel
+        fields = PROFILE_FIELDS
+
+    def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
+        if self.current_user:
+            for field in PROFILE_FIELDS:
+                if not self.current_user.has_perm(f"auth.change_user_{field}"):
+                    self.fields[field].widget.attrs["readonly"] = True
 
 
 class FilterProductsForm(forms.Form):

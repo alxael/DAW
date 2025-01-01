@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .forms import SignupForm, ProfileChangeForm
-from .models import UnitModel, CurrencyModel, SupplierModel, CategoryModel, ProductModel, StockModel, OfferModel, OfferViewModel, PromotionModel, ProfileModel, OrderModel, OrderOfferModel
+from .forms import ProfileChangeAdminForm, SignupForm
+from .models import UnitModel, CurrencyModel, CurrencyConversionModel, SupplierModel, CategoryModel, ProductModel, StockModel, OfferModel, OfferViewModel, PromotionModel, ProfileModel, OrderModel, OrderOfferModel, PROFILE_FIELDS
 
 # Register your models here.
 
@@ -20,6 +20,14 @@ class CurrencyAdmin(admin.ModelAdmin):
 
 
 admin.site.register(CurrencyModel, CurrencyAdmin)
+
+
+class CurrencyConversionAdmin(admin.ModelAdmin):
+    list_display = ['source', 'destination', 'rate']
+    search_fields = ['source', 'destination']
+
+
+admin.site.register(CurrencyConversionModel, CurrencyConversionAdmin)
 
 
 class SupplierAdmin(admin.ModelAdmin):
@@ -50,7 +58,7 @@ admin.site.register(ProductModel, ProductAdmin)
 
 class StockAdmin(admin.ModelAdmin):
     list_display = ['product', 'supplier', 'quantity',
-                    'unit', 'reception_date', 'expiration_date']
+                    'reception_date', 'expiration_date']
     list_filter = ['product', 'supplier',
                    'reception_date', 'expiration_date']
     search_fields = ['product', 'supplier',
@@ -69,7 +77,28 @@ admin.site.register(PromotionModel)
 class ProfileAdmin(UserAdmin):
     list_display = ["email", "username", "is_email_confirmed"]
     search_fields = ["email", "username"]
-    readonly_fields = ['email_confirmation_code']
+
+    form = ProfileChangeAdminForm
+    add_form = SignupForm
+    model = ProfileModel
+
+    def get_form(self, request, obj=None, **kwargs):
+        kwargs['form'] = self.form
+        form = super().get_form(request, obj, **kwargs)
+
+        class CreateChangeProfileForm(form):
+            def __init__(self, *args, **kwargs):
+                kwargs['current_user'] = request.user
+                super().__init__(*args, **kwargs)
+
+        return CreateChangeProfileForm
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = list(super().get_readonly_fields(request, obj))
+        for field in PROFILE_FIELDS:
+            if not request.user.has_perm(f"auth.change_user_{field}"):
+                readonly_fields.append(field)
+        return readonly_fields
 
     fieldsets = [
         ("General",
@@ -77,7 +106,8 @@ class ProfileAdmin(UserAdmin):
              "fields": [
                  "email",
                  "username",
-                 "is_email_confirmed"
+                 "is_email_confirmed",
+                 "is_blocked"
              ]
          }),
         ("Personal information",
@@ -118,7 +148,8 @@ class ProfileAdmin(UserAdmin):
              "fields": [
                  "email",
                  "username",
-                 "is_email_confirmed"
+                 "is_email_confirmed",
+                 "is_blocked"
              ]
          }),
         ("Personal information",

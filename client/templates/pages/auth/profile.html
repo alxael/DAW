@@ -4,7 +4,6 @@
 
 {% block scripts %}
   <script>
-    const csrfToken = '{{ csrf_token }}'
     const signInUrl = "{% url 'sign-in' %}"
     const signUpUrl = "{% url 'sign-up' %}"
     const signOutUrl = "{% url 'sign-out' %}"
@@ -16,8 +15,22 @@
 {% endblock %}
 
 {% block content %}
-  <div class="container background-profile">
-    <h1 class="mb-3">Profile</h1>
+  <div class="container min-vh-100 col col-lg-8 pt-5">
+    <h1 class="mt-5 mb-3">
+      Profile
+      {% if user.is_superuser or user.is_staff %}
+        <a href="{% url 'admin:index' %}">
+          <span class="badge text-bg-success mx-2">
+            {% if user.is_superuser %}
+              Superuser
+            {% elif user.is_staff %}
+              Staff
+            {% endif %}
+          </span>
+        </a>
+      {% endif %}
+    </h1>
+
     <div class="card mb-3">
       <div class="card-header">
         <h4>Details</h4>

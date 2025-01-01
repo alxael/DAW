@@ -4,7 +4,6 @@
 
 {% block scripts %}
   <script>
-    const csrfToken = '{{ csrf_token }}'
     const productListUrl = "{% url 'product-list' %}"
     const productEditUrl = "{% url 'product-edit' 'uuid' %}"
   </script>

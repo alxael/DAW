@@ -16,6 +16,28 @@ ORDER_STATUS = [
     (5, "Completed")
 ]
 
+PROFILE_FIELDS = [
+    "email",
+    "username",
+    "is_email_confirmed",
+    "is_blocked",
+    "first_name",
+    "last_name",
+    "date_of_birth",
+    "phone_number",
+    "country",
+    "city",
+    "address_line_one",
+    "address_line_two",
+    "is_active",
+    "is_staff",
+    "is_superuser",
+    "groups",
+    "user_permissions",
+    "last_login",
+    "date_joined"
+]
+
 
 class ProfileModel(AbstractUser):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -28,9 +50,10 @@ class ProfileModel(AbstractUser):
     address_line_one = models.CharField(max_length=100, null=True, blank=True)
     address_line_two = models.CharField(max_length=100, null=True, blank=True)
     is_following_newsletter = models.BooleanField(default=False)
+    is_blocked = models.BooleanField(default=False)
 
-    def __str__(self):
-        return self.username
+    class Meta:
+        permissions = [(f"change_user_{property_name}", f"Can change user {property_name}") for property_name in PROFILE_FIELDS]
 
 
 class UnitModel(models.Model):
@@ -52,6 +75,18 @@ class CurrencyModel(models.Model):
 
     def get_uuid_display(self):
         return self.name
+
+
+class CurrencyConversionModel(models.Model):
+    uuid = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False)
+    source = models.ForeignKey(
+        CurrencyModel, on_delete=models.PROTECT, null=True, blank=True, related_name="source")
+    destination = models.ForeignKey(
+        CurrencyModel, on_delete=models.PROTECT, null=True, blank=True, related_name="destination")
+    rate = models.DecimalField(
+        max_digits=10, decimal_places=4, null=True, blank=True)
+    date = models.DateTimeField(auto_now=True)
 
 
 class SupplierModel(models.Model):
@@ -128,7 +163,6 @@ class StockModel(models.Model):
     product = models.ForeignKey(ProductModel, on_delete=models.RESTRICT)
     supplier = models.ForeignKey(SupplierModel, on_delete=models.PROTECT)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
-    unit = models.ForeignKey(UnitModel, on_delete=models.PROTECT)
     reception_date = models.DateTimeField()
     expiration_date = models.DateTimeField(null=True, blank=True)
 
@@ -145,11 +179,11 @@ class OfferModel(models.Model):
     currency = models.ForeignKey(CurrencyModel, on_delete=models.PROTECT)
     last_changed = models.DateTimeField(auto_now=True)
 
-    def get_price_display(self):
-        return f"{self.price:.2f} {self.currency.code}"
+    def get_price(self, currency_conversion):
+        return f"{self.price * currency_conversion.rate:.2f}"
 
-    def get_price_discounted_display(self):
-        return f"{(self.price * (1 - self.discount)):.2f} {self.currency.code}"
+    def get_price_discounted(self, currency_conversion):
+        return f"{(self.price * currency_conversion.rate * (1 - self.discount)):.2f}"
 
     def get_absolute_url(self):
         return reverse("offer-view", kwargs={"offer_uuid": self.uuid})

@@ -1,17 +1,7 @@
 async function signin() {
   const formElement = document.forms["sign-in-form"];
   const formData = new FormData(formElement);
-
-  const response = await fetch(signInUrl, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-      "X-CSRFToken": csrfToken,
-    },
-    body: formData,
-  }).then((data) => data.json());
+  const response = await fetchData("POST", signInUrl, formData);
 
   cleanUpFormErrors();
   clearForm("sign-in-form", [], false);
@@ -26,23 +16,13 @@ async function signin() {
 async function signup() {
   const formElement = document.forms["sign-up-form"];
   const formData = new FormData(formElement);
-
-  const response = await fetch(signUpUrl, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-      "X-CSRFToken": csrfToken,
-    },
-    body: formData,
-  }).then((data) => data.json());
+  const response = await fetchData("POST", signUpUrl, formData);
 
   if (response.success) {
     $(window).scrollTop();
     $("#background").empty();
     const successCard = $("<div></div>").addClass(
-      "card p-3 text-white bg-success"
+      "card p-3 text-white text-bg-success mt-5"
     );
 
     const body = $("<div></div>").addClass("card-body");
@@ -76,20 +56,10 @@ async function signup() {
 async function changePassword() {
   const formElement = document.forms["change-password-form"];
   const formData = new FormData(formElement);
-
-  const response = await fetch(changePasswordUrl, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-      "X-CSRFToken": csrfToken,
-    },
-    body: formData,
-  }).then((data) => data.json());
+  const response = await fetchData("POST", changePasswordUrl, formData);
 
   if (response.success) {
-    // show message in profile page
+    // replace with toast
     window.location.href = profileUrl;
   } else {
     cleanUpFormErrors();
@@ -109,8 +79,14 @@ async function signout() {
     },
   });
   if (response.status === 200) {
+    const offerUuids = getCartOfferUuids();
+    localStorage.removeItem("cartItemsCount");
+    for (const offerUuid of offerUuids) {
+      localStorage.removeItem(offerUuid);
+    }
+
     window.location.href = signInUrl;
   } else {
-    console.log("Failed!"); // to be replaced
+    // replace with toast
   }
 }

@@ -4,8 +4,9 @@
 
 {% block scripts %}
   <script>
-    const csrfToken = '{{ csrf_token }}'
+    const cartUrl = "{% url 'cart' %}"
     const offerListUrl = "{% url 'offer-list' %}"
+    const offerViewUrl = "{% url 'offer-view' 'uuid' %}"
   </script>
   <link rel="stylesheet" href="{% static 'css/offer.css' %}" />
   <script src="{% static 'js/offer.js' %}"></script>
@@ -15,16 +16,16 @@
   <div class="container background">
     <div class="d-lg-flex justify-content-lg-between align-items-center mb-3 row">
       <div class="col-md-8">
-        <h1>{{ offer.product.name }}</h1>
+        <h1 id="offer-title">{{ offer.product.name }}</h1>
         <h6 class="text-muted text-break">{{ offer.product.description }}</h6>
       </div>
       <div class="card mt-3 col-md-4">
         <div class="card-body">
           {% if offer.discount != 0 %}
-            <h5 class="text-muted text-decoration-line-through">{{ offer|get_price_display }}</h5>
+            <h5 id="offer-price" class="text-muted text-decoration-line-through">{{ offer|get_price_display:currency_conversion }}</h5>
           {% endif %}
-          <h4 class="card-title text-danger">{{ offer|get_price_discounted_display }}</h4>
-          <button class="btn w-100 btn-primary" href="{% url 'offer-list' %}">
+          <h4 id="offer-price-discounted" class="card-title text-danger">{{ offer|get_price_discounted_display:currency_conversion }}</h4>
+          <button id="purchase-button" class="btn w-100 btn-primary" onclick="addToCart('{{ offer.uuid }}', 1)">
             Purchase
             <i class="bi bi-cart"></i>
           </button>

@@ -1,17 +1,7 @@
 async function contact() {
   const formElement = document.forms.contactForm;
   const formData = new FormData(formElement);
-
-  const response = await fetch(indexUrl, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-      "X-CSRFToken": csrfToken,
-    },
-    body: formData,
-  }).then((data) => data.json());
+  const response = await fetchData("POST", indexUrl, formData);
 
   if (response.success) {
     const message = $("<h4></h4>")
