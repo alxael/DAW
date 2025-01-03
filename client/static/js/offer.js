@@ -180,10 +180,13 @@ let totalPrice = 0;
 
 const generateEmptyCartAlert = () => {
   const cartItemsCount = localStorage.getItem("cartItemsCount");
-  if (cartItemsCount == 0 || cartItemsCount === null) {
-    const emptyCartAlert = $("<div></div>").addClass(
-      "card p-2 text-bg-warning"
-    );
+  if (
+    (cartItemsCount == 0 || cartItemsCount === null) &&
+    !$("#empty-cart-alert").length
+  ) {
+    const emptyCartAlert = $("<div></div>")
+      .addClass("card p-2 text-bg-warning my-2")
+      .attr("id", "empty-cart-alert");
 
     const body = $("<div></div>").addClass("card-body");
     const title = $("<h4></h4>").addClass("card-title").text("Cart is empty!");
@@ -197,12 +200,15 @@ const generateEmptyCartAlert = () => {
     body.append(title);
     body.append(content);
 
-    emptyCartAlert.append(body);
-    $("#cart-list").append(emptyCartAlert);
+    emptyCartAlert.prepend(body);
+    $("#cart-list").prepend(emptyCartAlert);
+    $("#purchase-button").addClass("disabled");
+  } else {
+    $("#purchase-button").removeClass("disabled");
   }
 };
 
-const updateCartItem = (offerUuid, quantity) => {
+const updateCartItem = (offerUuid, quantity, deleteIfQuantityZero = false) => {
   const offerCartQuantity = Number(localStorage.getItem(offerUuid));
   const actionOutcome = addToCart(
     offerUuid,
@@ -211,21 +217,28 @@ const updateCartItem = (offerUuid, quantity) => {
   );
   if (actionOutcome !== false) {
     quantity = offerCartQuantity + actionOutcome;
-    const offerPriceNew = Number(cartData[offerUuid].price) * quantity;
-    const totalPriceDelta = Number(cartData[offerUuid].price) * actionOutcome;
+    const offerPriceNew =
+      Number(cartData[offerUuid].price_discounted) * quantity;
+    const totalPriceDelta =
+      Number(cartData[offerUuid].price_discounted) * actionOutcome;
     $(`#cart-price-${offerUuid}`).text(
       `${offerPriceNew.toFixed(2)} ${currency}`
     );
     $(`#cart-quantity-${offerUuid}`).text(quantity);
-    if (quantity === 0) {
+    if (quantity === 0 && deleteIfQuantityZero) {
       $(`#${offerUuid}`).remove();
       localStorage.removeItem(offerUuid);
     }
     $(`#cart-input-${offerUuid}`).val(quantity);
-    generateEmptyCartAlert();
     totalPrice += totalPriceDelta;
-    $("#cart-total-price").text(`${totalPrice.toFixed(2)} ${currency}`);
+    $("#cart-total-price").text(
+      `${Math.abs(totalPrice).toFixed(2)} ${currency}`
+    );
+    if ($("#empty-cart-alert").length) {
+      $("#empty-cart-alert").remove();
+    }
   }
+  generateEmptyCartAlert();
   return actionOutcome === false ? false : quantity;
 };
 
@@ -266,7 +279,7 @@ const loadCart = async () => {
         .attr("type", "button")
         .addClass("btn btn-sm btn-outline-danger mx-1");
       cardDeleteButton.on("click", function () {
-        updateCartItem(offer.uuid, 0);
+        updateCartItem(offer.uuid, 0, true);
       });
       const cardDeleteButtonIcon = $("<i></i>").addClass("bi bi-trash");
       cardDeleteButton.append(cardDeleteButtonIcon);
@@ -311,16 +324,18 @@ const loadCart = async () => {
         .attr("id", `cart-quantity-${offer.uuid}`);
       offerQuantity.append(offerQuantityValue);
 
-      const offerQuantityControl = $("<div></div>").addClass("d-flex flex-row justify-content-center");
+      const offerQuantityControl = $("<div></div>").addClass(
+        "d-flex flex-row justify-content-center"
+      );
 
       const offerSubtractQuantityButton = $("<button></button>")
         .attr("type", "button")
         .addClass("btn btn-sm btn-outline-primary mx-1");
       offerSubtractQuantityButton.on("click", function () {
-        updateCartItem(
-          offer.uuid,
-          Number(localStorage.getItem(offer.uuid)) - 1
-        );
+        const offerQuantity = Number(localStorage.getItem(offer.uuid));
+        if (offerQuantity > 0) {
+          updateCartItem(offer.uuid, offerQuantity - 1);
+        }
       });
 
       const offerQuantityInput = $("<input></input>")
@@ -365,7 +380,8 @@ const loadCart = async () => {
       offerQuantityControl.append(offerQuantityInput);
       offerQuantityControl.append(offerAddQuantityButton);
 
-      const offerPriceTotal = Number(offer.price) * offerCartQuantity;
+      const offerPriceTotal =
+        Number(offer.price_discounted) * offerCartQuantity;
       totalPrice += offerPriceTotal;
 
       const offerPrice = $("<div></div>").addClass("card-text").text("Price:");
@@ -387,6 +403,30 @@ const loadCart = async () => {
 
     $("#cart-total-price").text(`${totalPrice.toFixed(2)} ${currency}`);
   } catch (exception) {
+    // replace with toast
+  }
+};
+
+const purchase = async () => {
+  let data = [];
+  const offerUuids = getCartOfferUuids();
+  for (const offerUuid of offerUuids) {
+    const offerOrder = {
+      offerUuid: offerUuid,
+      quantity: localStorage.getItem(offerUuid),
+    };
+    data.push(offerOrder);
+  }
+
+  const response = await fetchData(
+    "POST",
+    addOrderUrl,
+    JSON.stringify({ offers: data, currency: currency })
+  );
+
+  if (response.success) {
+    clearCart();
+  } else {
     // replace with toast
   }
 };

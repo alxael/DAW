@@ -79,12 +79,7 @@ async function signout() {
     },
   });
   if (response.status === 200) {
-    const offerUuids = getCartOfferUuids();
-    localStorage.removeItem("cartItemsCount");
-    for (const offerUuid of offerUuids) {
-      localStorage.removeItem(offerUuid);
-    }
-
+    clearCart();
     window.location.href = signInUrl;
   } else {
     // replace with toast

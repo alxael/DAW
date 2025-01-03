@@ -182,6 +182,12 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Media
+
+MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = "/media/"
+PDF_ROOT = MEDIA_ROOT / 'pdf'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -204,7 +210,7 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'INFO',
+            'level': 'INFO' if not DEBUG else 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },

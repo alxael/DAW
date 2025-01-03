@@ -1,9 +1,12 @@
 import re
+import io
 import uuid
 import json
+import time
 import logging
 from datetime import datetime
 from ipware import get_client_ip
+from reportlab.pdfgen import canvas
 from django import forms
 from django.conf import settings
 from django.urls import reverse
@@ -14,9 +17,9 @@ from django.http import JsonResponse, HttpResponseForbidden, HttpResponseNotFoun
 from django.core.paginator import Paginator, EmptyPage
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.db.models import Count
-from .models import ProductModel, UnitModel, ProfileModel, OfferModel, OfferViewModel, PromotionModel, StockModel, CurrencyModel
+from .models import ProductModel, UnitModel, ProfileModel, OfferModel, OfferViewModel, PromotionModel, StockModel, CurrencyModel, OrderModel, OrderOfferModel, CurrencyConversionModel
 from .forms import FilterProductsForm, ProductAddEditForm, FilterOffersForm, FilterPromotionsForm, PromotionAddEditForm, ContactForm, SigninForm, SignupForm, ChangePasswordForm
-from .dto import ProductListDto, OfferListDto, PromotionListDto, CurrencyListDto, CurrencyConversionModel
+from .dto import ProductListDto, OfferListDto, PromotionListDto, CurrencyListDto, OrderListDto
 from .tasks import send_email_html, send_promotion_emails_html, send_email_admins_html, calculate_discounts
 
 # Utilities
@@ -166,7 +169,8 @@ def sign_up(request):
                 "emails/email-confirmation.html",
                 {"first_name": user.first_name, "confirmation_url": absolute_url},
                 "Online Store - Account confirmation",
-                [user.email]
+                [user.email],
+                []
             )
 
             user.save()
@@ -452,7 +456,200 @@ def cart(request):
         offers = OfferModel.objects.all().filter(uuid__in=data['offers'])
         return JsonResponse({'offers': [OfferListDto(offer, currency) for offer in offers]})
     elif request.method == 'GET':
-        return render(request, 'pages/offer/cart.html')
+        return render(request, 'pages/order/cart.html')
+    else:
+        return HttpResponseNotFound()
+
+# Order
+
+
+def generate_invoice_page_information(pdf, page_index, order, total_price):
+    title = pdf.beginText(50, 780)
+    title.setFont("Helvetica", 22)
+    title.textLine("Online store")
+
+    subtitle = pdf.beginText(50, 760)
+    subtitle.setFont("Helvetica", 16)
+    subtitle.textLine("Invoice")
+
+    price = pdf.beginText(50, 740)
+    price.setFont("Helvetica", 12)
+    price.textLine(f"Price: {total_price} {order.currency.code}")
+
+    admin_email = pdf.beginText(50, 720)
+    admin_email.setFont("Helvetica", 12)
+    admin_email.textLine("Administrator email:")
+    admin_email.textLine(settings.ADMINS[0][1])
+
+    pdf.drawText(title)
+    pdf.drawText(subtitle)
+    pdf.drawText(price)
+    pdf.drawText(admin_email)
+
+    full_name = pdf.beginText(250, 790)
+    full_name.setFont("Helvetica", 12)
+    full_name.textLine(f"Full name: {order.user.get_full_name()}")
+
+    email = pdf.beginText(250, 770)
+    email.setFont("Helvetica", 12)
+    email.textLine(f"Email: {order.user.email}")
+
+    phone_number = pdf.beginText(250, 750)
+    phone_number.setFont("Helvetica", 12)
+    phone_number.textLine(f"Phone number: {order.user.phone_number}")
+
+    location = pdf.beginText(250, 730)
+    location.setFont("Helvetica", 12)
+    location.textLine(f"Location: {order.user.country} {order.user.city}")
+
+    address = pdf.beginText(250, 710)
+    address.setFont("Helvetica", 12)
+    address.textLine(f"Full address: {order.user.address_line_one} {order.user.address_line_two}")
+
+    pdf.drawText(full_name)
+    pdf.drawText(email)
+    pdf.drawText(phone_number)
+    pdf.drawText(location)
+    pdf.drawText(address)
+
+    page_number = pdf.beginText(50, 50)
+    page_number.setFont("Helvetica", 12)
+    page_number.textLine(f"Page {int(page_index)}")
+
+    pdf.drawText(page_number)
+
+
+def generate_invoice(path, order):
+    offers_per_page = 6
+
+    pdf = canvas.Canvas(path)
+    pdf.setFont("Helvetica", 12)
+
+    order_offers = OrderOfferModel.objects.filter(order=order)
+
+    for index, order_offer in enumerate(order_offers):
+        offer_box_y = 580 - (index % offers_per_page) * 100
+        pdf.rect(50, offer_box_y, 500, 100)
+
+        offer_name = pdf.beginText(70, offer_box_y + 70)
+        offer_name.setFont("Helvetica", 16)
+        offer_name.textLine(order_offer.offer.product.name)
+
+        offer_description = pdf.beginText(70, offer_box_y + 55)
+        offer_description.setFont("Helvetica", 12)
+        offer_description.textLine(order_offer.offer.product.description)
+
+        offer_quantity = pdf.beginText(70, offer_box_y + 20)
+        offer_quantity.setFont("Helvetica", 12)
+        offer_quantity.textLine(f"Quantity: {order_offer.quantity}")
+
+        offer_price_str = f"Price: {order_offer.quantity * order_offer.price} {order.currency.code}"
+        offer_price_str_width = int(pdf.stringWidth(offer_price_str, "Helvetica", 12))
+        offer_price = pdf.beginText(530 - offer_price_str_width, offer_box_y + 20)
+        offer_price.setFont("Helvetica", 12)
+        offer_price.textLine(offer_price_str)
+
+        pdf.drawText(offer_name)
+        pdf.drawText(offer_description)
+        pdf.drawText(offer_quantity)
+        pdf.drawText(offer_price)
+
+        if index % offers_per_page == (offers_per_page - 1):
+            pdf.showPage()
+        if index % offers_per_page == 0:
+            generate_invoice_page_information(
+                pdf,
+                index / offers_per_page + 1,
+                order,
+                order.total_price
+            )
+
+    pdf.save()
+
+    return pdf
+
+
+@signin_required
+def order_add(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+
+        currency_code = data['currency']
+        currency = CurrencyModel.objects.get(code=currency_code)
+
+        product_stock = {product.uuid: 0 for product in ProductModel.objects.all()}
+
+        stocks = StockModel.objects.all()
+        for stock in stocks:
+            product_stock[stock.product.uuid] += int(stock.quantity)
+
+        order = OrderModel(
+            user=request.user,
+            full_address=request.user.get_full_address(),
+            phone_number=request.user.phone_number,
+            currency=currency
+        )
+
+        total_price = 0
+        order_offers = []
+        for offer_data in data['offers']:
+            offer = get_object_or_404(OfferModel, uuid=offer_data['offerUuid'])
+            currency_conversion = CurrencyConversionModel.objects.get(source=offer.currency, destination=currency)
+            quantity = int(offer_data['quantity'])
+            price = float(offer.get_price_discounted(currency_conversion))
+
+            total_price += float(offer.get_price_discounted(currency_conversion)) * quantity
+
+            order_offer = OrderOfferModel(
+                order=order,
+                offer=offer,
+                quantity=quantity,
+                price=price
+            )
+            order_offers.append(order_offer)
+
+            product_stock[offer.product.uuid] -= quantity
+            if product_stock[offer.product.uuid] < 0:
+                return JsonResponse({"success": False, "error": "Attempting to purchase more items than are in stock!"})
+
+        order.total_price = total_price
+        order.save()
+
+        for order_offer in order_offers:
+            order_offer.save()
+
+        timestamp = int(time.time())
+        pdf_name = f"invoice-{timestamp}.pdf"
+        pdf_relative_path = f"pdf/{pdf_name}"
+        pdf_absolute_path = f"{settings.MEDIA_ROOT}/{pdf_relative_path}"
+
+        generate_invoice(pdf_absolute_path, order)
+        send_email_html.delay(
+            "emails/order-added.html",
+            {'first_name': request.user.first_name},
+            "Invoice",
+            [request.user.email],
+            attachments=[pdf_relative_path]
+        )
+
+        order.invoice = pdf_relative_path
+        order.save()
+
+        return JsonResponse({"success": True})
+    else:
+        return HttpResponseNotFound()
+
+
+@signin_required
+def order_list(request):
+    if request.method == 'GET':
+        return render(request, 'pages/order/order-list.html')
+    elif request.method == 'POST':
+        all_orders = OrderModel.objects.all().filter(user=request.user)
+
+        orders, pages = get_paginated_objects(request, all_orders)
+        orders = [OrderListDto(order) for order in orders]
+        return JsonResponse({"success": True, 'orders': orders, 'pages': pages})
     else:
         return HttpResponseNotFound()
 
@@ -475,8 +672,6 @@ def process_promotion_form(promotion_form):
             offer_uuids = [offer.uuid for offer in offers]
             offer_views = OfferViewModel.objects.all().filter(offer__in=offer_uuids)
             offer_views_users = offer_views.values('user', 'offer').order_by().annotate(view_count=Count('offer'))
-
-            # notifying users of promotion should be a separate endpoint
 
             user_uuids = set()
             for offer_views_user in offer_views_users:

@@ -208,7 +208,12 @@ if (currency === null) {
 const setCurrency = (currencyCode) => {
   currency = currencyCode;
   localStorage.setItem("currency", currency);
-  location.reload();
+
+  const url = new URL(window.location.href);
+  if (url.searchParams.has("currency")) {
+    url.searchParams.set("currency", currency);
+  }
+  window.location.href = url.toString();
 };
 
 const fetchCurrencyData = async () => {
@@ -309,9 +314,7 @@ const addToCart = (offerUuid, delta, showSuccessToast = true) => {
     newOfferItemsCount += Number(localStorage.getItem(offerUuid));
   cartItemsCount += deltaAdjusted;
 
-  if (newOfferItemsCount === 0) {
-    localStorage.removeItem(offerUuid);
-  } else {
+  if (newOfferItemsCount >= 0) {
     localStorage.setItem(offerUuid, newOfferItemsCount);
   }
   localStorage.setItem("cartItemsCount", String(cartItemsCount));
@@ -352,4 +355,17 @@ const refreshCartItemMarker = (offerUuid) => {
     offerMarker.addClass("text-bg-danger");
     offerMarker.text("In cart");
   }
+};
+
+const clearCart = () => {
+  const offerUuids = getCartOfferUuids();
+  localStorage.removeItem("cartItemsCount");
+  for (const offerUuid of offerUuids) {
+    $(`#${offerUuid}`).remove();
+    localStorage.removeItem(offerUuid);
+  }
+  refreshCartItemsCount();
+  totalPrice = 0;
+  $("#cart-total-price").text(`${totalPrice.toFixed(2)} ${currency}`);
+  generateEmptyCartAlert();
 };

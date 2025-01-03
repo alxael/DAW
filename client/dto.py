@@ -1,4 +1,5 @@
-from .models import ProductModel, OfferModel, PromotionModel, CurrencyModel, CurrencyConversionModel
+from django.conf import settings
+from .models import ProductModel, OfferModel, PromotionModel, CurrencyModel, CurrencyConversionModel, OrderModel, OrderOfferModel, ORDER_STATUS
 
 
 class ProductListDto(dict):
@@ -37,3 +38,24 @@ class CurrencyListDto(dict):
         self['uuid'] = currency_model.uuid
         self['name'] = currency_model.name
         self['code'] = currency_model.code
+
+
+class OrderListDto(dict):
+    def __init__(self, order_model: OrderModel):
+        self['uuid'] = order_model.uuid
+        self['price'] = f"{order_model.total_price} {order_model.currency.code}"
+        self['status'] = ORDER_STATUS[order_model.status][1]
+        self['date'] = order_model.date.strftime("%d/%m/%Y")
+        self['invoice'] = settings.MEDIA_URL + order_model.invoice.__str__()
+
+        offers = []
+        order_offers = OrderOfferModel.objects.all().filter(order=order_model)
+        for order_offer in order_offers:
+            offer = {
+                'offerUuid': order_offer.offer.uuid,
+                'name': order_offer.offer.product.name,
+                'price': f"{order_offer.price * order_offer.quantity} {order_model.currency.code}",
+                'quantity': order_offer.quantity
+            }
+            offers.append(offer)
+        self['offers'] = offers

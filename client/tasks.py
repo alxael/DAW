@@ -15,7 +15,7 @@ logger = get_task_logger('django')
 
 
 @shared_task(bind=True, max_retries=3)
-def send_email_html(self, content_path, content_data, subject, to):
+def send_email_html(self, content_path, content_data, subject, to, attachments):
     try:
         content = render_to_string(content_path, content_data)
         confirmation_email = EmailMessage(
@@ -24,6 +24,8 @@ def send_email_html(self, content_path, content_data, subject, to):
             to=to
         )
         confirmation_email.content_subtype = "html"
+        for attachment in attachments:
+            confirmation_email.attach_file(attachment)
         confirmation_email.send(fail_silently=False)
         return True
     except TemplateDoesNotExist:

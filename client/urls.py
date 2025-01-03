@@ -1,5 +1,7 @@
 from django.urls import path, include
 from django.contrib.sitemaps.views import sitemap
+from django.conf import settings
+from django.conf.urls.static import static
 from .sitemaps import StaticViewsSitemap, OfferSitemap
 from . import views
 
@@ -26,7 +28,8 @@ product_urlpatterns = [
 
 offer_urlpatterns = [
     path("list", views.offer_list, name="offer-list"),
-    path("view/<offer_uuid>", views.offer_view, name="offer-view")
+    path("view/<offer_uuid>", views.offer_view, name="offer-view"),
+    path("cart/", views.cart, name="offer-cart"),
 ]
 
 promotion_urlpatterns = [
@@ -44,14 +47,22 @@ currency_urlpatterns = [
     path("list", views.currency_list, name="currency-list")
 ]
 
+order_urlpatters = [
+    path("list", views.order_list, name="order-list"),
+    path("add", views.order_add, name="order-add")
+]
+
 urlpatterns = [
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path("", views.presentation, name="presentation"),
-    path("cart/", views.cart, name="cart"),
     path("", include(auth_urlpatterns)),
     path("product/", include(product_urlpatterns)),
     path("offer/", include(offer_urlpatterns)),
     path("promotion/", include(promotion_urlpatterns)),
     path("stock/", include(stock_urlpatterns)),
-    path("currency", include(currency_urlpatterns))
+    path("currency", include(currency_urlpatterns)),
+    path("order/", include(order_urlpatters))
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

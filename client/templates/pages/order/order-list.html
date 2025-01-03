@@ -1,0 +1,21 @@
+{% extends 'pages/base.html' %}
+{% load tags %}
+{% load static %}
+
+{% block scripts %}
+  <script>
+    const orderListUrl = "{% url 'order-list' %}"
+  </script>
+  <link rel="stylesheet" href="{% static 'css/order.css' %}" />
+  <script src="{% static 'js/order.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="container min-vh-100 col col-md-12 pt-5">
+    <div class="mt-5 mb-3">
+      <h1>Orders</h1>
+      {% include 'components/pagination.html' with object_name='Orders' %}
+    </div>
+    <div id="orders-list" class="container"></div>
+  </div>
+{% endblock %}

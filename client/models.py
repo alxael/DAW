@@ -13,7 +13,8 @@ ORDER_STATUS = [
     (2, "Confirmed"),
     (3, "Delivering"),
     (4, "Received"),
-    (5, "Completed")
+    (5, "Completed"),
+    (6, "Cancelled")
 ]
 
 PROFILE_FIELDS = [
@@ -54,6 +55,9 @@ class ProfileModel(AbstractUser):
 
     class Meta:
         permissions = [(f"change_user_{property_name}", f"Can change user {property_name}") for property_name in PROFILE_FIELDS]
+
+    def get_full_address(self):
+        return f"{self.address_line_one} {self.address_line_two}"
 
 
 class UnitModel(models.Model):
@@ -220,15 +224,16 @@ class PromotionModel(models.Model):
 class OrderModel(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(ProfileModel, on_delete=models.PROTECT, null=True, blank=True)
-    offers = models.ManyToManyField(OfferModel, through="OrderOfferModel")
-    status = models.PositiveIntegerField(default=ORDER_STATUS[0], choices=ORDER_STATUS)
+    status = models.PositiveIntegerField(default=ORDER_STATUS[0][0], choices=ORDER_STATUS)
     full_address = models.CharField(max_length=200, default="")
-    contact = models.CharField(max_length=200, default="")
-
+    phone_number = PhoneNumberField()
+    invoice = models.FileField(null=True, blank=True)
+    date = models.DateTimeField(auto_now_add=True)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.ForeignKey(CurrencyModel, on_delete=models.PROTECT)
 
 class OrderOfferModel(models.Model):
     order = models.ForeignKey(OrderModel, on_delete=models.PROTECT)
     offer = models.ForeignKey(OfferModel, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    discount = models.DecimalField(max_digits=10, decimal_places=3, default=0)

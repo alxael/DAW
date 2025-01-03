@@ -4,9 +4,10 @@
 
 {% block scripts %}
   <script>
-    const cartUrl = "{% url 'cart' %}"
+    const cartUrl = "{% url 'offer-cart' %}"
     const offerListUrl = "{% url 'offer-list' %}"
     const offerViewUrl = "{% url 'offer-view' 'uuid' %}"
+    const addOrderUrl = "{% url 'order-add' %}"
   </script>
   <link rel="stylesheet" href="{% static 'css/offer.css' %}" />
   <script src="{% static 'js/offer.js' %}"></script>
@@ -63,5 +64,6 @@
         </li>
       </ul>
     </div>
+    <button id="purchase-button" class="btn btn-primary w-100" onclick="purchase();">Purchase</button>
   </div>
 {% endblock %}

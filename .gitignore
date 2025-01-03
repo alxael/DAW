@@ -6,3 +6,4 @@ staticfiles
 messages
 logs
 env
+media/pdf/
